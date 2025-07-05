@@ -390,6 +390,13 @@ const handlePreviewWindowMessage = (event) => {
   }
 };
 const showAbout = ref(false);
+
+onMounted(() => {
+  if (!localStorage.getItem('aboutModalShown')) {
+    showAbout.value = true;
+    localStorage.setItem('aboutModalShown', '1');
+  }
+});
 </script>
 
 <style>

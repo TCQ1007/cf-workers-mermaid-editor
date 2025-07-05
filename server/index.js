@@ -6,6 +6,16 @@ export default {
 			'Access-Control-Allow-Headers': '*',
 		};
 
+		const url = new URL(request.url);
+
+		// 处理微前端路径重写
+		if (url.pathname.startsWith('/mermaid')) {
+			const newPath = url.pathname.replace(/^\/mermaid/, '') || '/';
+			const newUrl = new URL(request.url);
+			newUrl.pathname = newPath;
+			request = new Request(newUrl, request);
+		}
+
 		// API路由
 		if (request.url.includes("/api/")) {
 			return Response.json({ message: "This Cloudflare workers Not Support API" }, { headers: corsHeaders });

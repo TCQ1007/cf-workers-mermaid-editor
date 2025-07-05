@@ -7,7 +7,7 @@
  * 检测是否在微前端环境中运行
  * @returns {boolean}
  */
-export function isInMicroApp() {
+export function isInJingdongMicroApp() {
   // 检测微前端环境标识
   const hasGlobalFlags = !!(
     window.__MICRO_APP_ENVIRONMENT__ ||
@@ -39,13 +39,12 @@ export function isInMicroApp() {
  * @returns {string}
  */
 export function getBasePath() {
-  // 无论在什么环境下都使用根路径，简化配置
-  if (isInMicroApp()) {
-    console.log('🔍 检测到微前端环境')
-  } else {
-    console.log('🏠 独立运行模式')
+  if (isInJingdongMicroApp()) {
+    console.log('🔍 检测到微前端环境，使用 /mermaid 路由前缀')
+    return '/mermaid'
   }
 
+  console.log('🏠 独立运行模式，不使用路由前缀')
   return '/'
 }
 

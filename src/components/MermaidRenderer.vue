@@ -27,8 +27,23 @@
 
       <!-- 操作按钮 -->
       <div v-if="svgContent && !loading && !error" class="mermaid-actions">
-        <button @click="copySVG" class="action-btn" title="复制SVG代码">📋 SVG</button>
-        <button @click="copyPNG" class="action-btn" title="复制PNG图片">🖼️ PNG</button>
+        <!-- 复制下拉菜单 -->
+        <div class="copy-dropdown" @mouseleave="showCopyMenu = false">
+          <button
+            @click="toggleCopyMenu"
+            @mouseenter="showCopyMenu = true"
+            class="action-btn copy-main-btn"
+            title="复制图表"
+          >
+            📋 复制为 ▼
+          </button>
+          <div v-if="showCopyMenu" class="copy-menu">
+            <button @click="copySVG" class="copy-option">📄 SVG代码</button>
+            <button @click="copyPNG" class="copy-option">🖼️ PNG图片</button>
+            <button @click="copyJPG" class="copy-option">📸 JPG图片</button>
+          </div>
+        </div>
+
         <button @click="downloadSVG" class="action-btn" title="下载SVG">💾 下载</button>
         <button @click="openLightbox" class="action-btn" title="全屏预览">🔍 预览</button>
       </div>
@@ -365,9 +380,10 @@ const startDrag = (event) => {
 
 // 复制状态
 const copyStatus = ref('')
+const showCopyMenu = ref(false)
 
-// SVG转PNG功能
-const svgToPng = (svgString, scale = 2) => {
+// SVG转图片功能
+const svgToImage = (svgString, format = 'png', scale = 2, quality = 0.9) => {
   return new Promise((resolve, reject) => {
     const canvas = document.createElement('canvas')
     const ctx = canvas.getContext('2d')
@@ -376,10 +392,18 @@ const svgToPng = (svgString, scale = 2) => {
     img.onload = () => {
       canvas.width = img.width * scale
       canvas.height = img.height * scale
+
+      // JPG需要白色背景
+      if (format === 'jpeg') {
+        ctx.fillStyle = 'white'
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+      }
+
       ctx.scale(scale, scale)
       ctx.drawImage(img, 0, 0)
 
-      canvas.toBlob(resolve, 'image/png')
+      const mimeType = format === 'jpeg' ? 'image/jpeg' : 'image/png'
+      canvas.toBlob(resolve, mimeType, quality)
     }
 
     img.onerror = reject
@@ -390,8 +414,14 @@ const svgToPng = (svgString, scale = 2) => {
   })
 }
 
+// 下拉菜单控制
+const toggleCopyMenu = () => {
+  showCopyMenu.value = !showCopyMenu.value
+}
+
 // 复制SVG功能
 const copySVG = async () => {
+  showCopyMenu.value = false
   if (!svgContent.value) {
     copyStatus.value = '没有可复制的内容'
     setTimeout(() => copyStatus.value = '', 2000)
@@ -436,6 +466,7 @@ const copySVG = async () => {
 
 // 复制PNG功能
 const copyPNG = async () => {
+  showCopyMenu.value = false
   if (!svgContent.value) {
     copyStatus.value = '没有可复制的内容'
     setTimeout(() => copyStatus.value = '', 2000)
@@ -446,7 +477,7 @@ const copyPNG = async () => {
     copyStatus.value = '🔄 正在转换PNG...'
 
     // 将SVG转换为PNG
-    const pngBlob = await svgToPng(svgContent.value)
+    const pngBlob = await svgToImage(svgContent.value, 'png')
 
     if (navigator.clipboard && window.ClipboardItem) {
       // 使用现代API复制图片
@@ -464,6 +495,43 @@ const copyPNG = async () => {
   } catch (err) {
     console.error('PNG复制失败:', err)
     copyStatus.value = '❌ PNG复制失败'
+  }
+
+  // 3秒后清除状态
+  setTimeout(() => copyStatus.value = '', 3000)
+}
+
+// 复制JPG功能
+const copyJPG = async () => {
+  showCopyMenu.value = false
+  if (!svgContent.value) {
+    copyStatus.value = '没有可复制的内容'
+    setTimeout(() => copyStatus.value = '', 2000)
+    return
+  }
+
+  try {
+    copyStatus.value = '🔄 正在转换JPG...'
+
+    // 将SVG转换为JPG
+    const jpgBlob = await svgToImage(svgContent.value, 'jpeg', 2, 0.9)
+
+    if (navigator.clipboard && window.ClipboardItem) {
+      // 使用现代API复制图片
+      const clipboardItem = new ClipboardItem({
+        'image/jpeg': jpgBlob
+      })
+      await navigator.clipboard.write([clipboardItem])
+      copyStatus.value = '✅ JPG已复制'
+    } else {
+      // 浏览器不支持复制图片到剪贴板
+      copyStatus.value = '❌ 浏览器不支持复制图片'
+    }
+
+    console.log('JPG已复制到剪贴板')
+  } catch (err) {
+    console.error('JPG复制失败:', err)
+    copyStatus.value = '❌ JPG复制失败'
   }
 
   // 3秒后清除状态
@@ -690,6 +758,50 @@ onUnmounted(() => {
 .action-btn:hover {
   background: white;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* 复制下拉菜单 */
+.copy-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.copy-main-btn {
+  min-width: 90px;
+}
+
+.copy-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 1000;
+  min-width: 120px;
+  overflow: hidden;
+}
+
+.copy-option {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background: white;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+.copy-option:hover {
+  background: #f5f5f5;
+}
+
+.copy-option:not(:last-child) {
+  border-bottom: 1px solid #eee;
 }
 
 /* 灯箱样式 */

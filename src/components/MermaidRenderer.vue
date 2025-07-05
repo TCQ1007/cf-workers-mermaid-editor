@@ -81,56 +81,7 @@ const props = defineProps({
     let rafId = null
     let currentMousePos = { x: 0, y: 0 }
     let isUpdating = false
-    // 全局加载状态管理
-    let mermaidLoadingPromise = null
 
-    const loadMermaid = () => {
-      // 如果已经加载完成
-      if (window.mermaid && typeof window.mermaid.initialize === 'function') {
-        return Promise.resolve()
-      }
-
-      // 如果正在加载中，返回同一个Promise
-      if (mermaidLoadingPromise) {
-        return mermaidLoadingPromise
-      }
-
-      // 检查是否已经有script标签在加载
-      const existingScript = document.querySelector('script[src*="mermaid"]')
-      if (existingScript) {
-        mermaidLoadingPromise = new Promise((resolve, reject) => {
-          existingScript.addEventListener('load', resolve)
-          existingScript.addEventListener('error', reject)
-        })
-        return mermaidLoadingPromise
-      }
-
-      // 创建新的加载Promise
-      mermaidLoadingPromise = new Promise((resolve, reject) => {
-        const script = document.createElement('script')
-        script.src = 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js'
-        script.setAttribute('data-library', 'mermaid')
-
-        script.onload = () => {
-          console.log('Mermaid library loaded successfully')
-          // 双重检查确保库真的可用
-          if (window.mermaid && typeof window.mermaid.initialize === 'function') {
-            resolve()
-          } else {
-            reject(new Error('Mermaid library loaded but not functional'))
-          }
-        }
-
-        script.onerror = () => {
-          mermaidLoadingPromise = null // 重置状态，允许重试
-          reject(new Error('Failed to load Mermaid library'))
-        }
-
-        document.head.appendChild(script)
-      })
-
-      return mermaidLoadingPromise
-    }
 
     const initMermaid = () => {
       if (!window.mermaid) {
@@ -356,15 +307,9 @@ const props = defineProps({
     watch(() => props.content, () => {
       renderMermaid()
     })
-    onMounted(async () => {
-      try {
-        await loadMermaid()
-        initMermaid()
-        renderMermaid()
-      } catch (err) {
-        console.error('Failed to load Mermaid:', err)
-        error.value = 'Mermaid 库加载失败，请刷新页面重试'
-      }
+    onMounted(() => {
+      initMermaid()
+      renderMermaid()
     })
     onUnmounted(() => {
       if (renderTimeout) clearTimeout(renderTimeout)

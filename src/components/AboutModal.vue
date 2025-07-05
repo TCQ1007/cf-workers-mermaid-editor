@@ -9,18 +9,19 @@
         <div class="about-row"><strong>作者：</strong>{{ about.author }}</div>
 
         <div class="about-section">
-          <div class="about-row"><strong>🎯 产品优势：</strong></div>
-          <ul class="about-list good-points">
-            <li v-for="(item, idx) in about.good_point" :key="idx">{{ item }}</li>
-          </ul>
-        </div>
-
-        <div class="about-section">
           <div class="about-row"><strong>💡 解决的痛点：</strong></div>
           <ul class="about-list pain-points">
             <li v-for="(item, idx) in about.pain_points" :key="idx">{{ item }}</li>
           </ul>
         </div>
+
+        <div class="about-section">
+          <div class="about-row"><strong>🎯 产品优势：</strong></div>
+          <ul class="about-list good-points">
+            <li v-for="(item, idx) in about.good_points" :key="idx">{{ item }}</li>
+          </ul>
+        </div>
+
       </div>
     </div>
   </div>

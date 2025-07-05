@@ -57,6 +57,7 @@
 
 <script>
 import { ref, onMounted, watch, nextTick, onUnmounted } from 'vue'
+import { isInJingdongMicroApp } from '../config/microapp.js'
 
 export default {
   name: 'MermaidRenderer',
@@ -89,14 +90,17 @@ export default {
         if (!window.mermaid) {
           throw new Error('Mermaid library not loaded')
         }
-        window.mermaid.initialize({
+
+        // 在微前端环境中使用更安全的配置
+        const isMicroApp = isInJingdongMicroApp()
+        const config = {
           startOnLoad: false,
           theme: 'default',
-          securityLevel: 'loose',
+          securityLevel: isMicroApp ? 'strict' : 'loose',
           fontFamily: 'Arial, sans-serif',
           flowchart: {
             useMaxWidth: true,
-            htmlLabels: true
+            htmlLabels: !isMicroApp // 微前端环境禁用HTML标签
           },
           sequence: {
             useMaxWidth: true
@@ -113,11 +117,24 @@ export default {
           pie: {
             useMaxWidth: true
           }
-        })
-        console.log('Mermaid initialized successfully')
+        }
+
+        window.mermaid.initialize(config)
+        console.log(`Mermaid initialized successfully (microApp: ${isMicroApp})`)
       } catch (err) {
         console.error('Failed to initialize Mermaid:', err)
         error.value = '无法初始化 Mermaid 渲染器'
+
+        // 在微前端环境中向父应用报告错误
+        if (isInJingdongMicroApp() && window.parent !== window) {
+          window.parent.postMessage({
+            type: 'MICRO_APP_ERROR',
+            name: 'mermaid',
+            component: 'MermaidRenderer',
+            error: err.message,
+            timestamp: Date.now()
+          }, '*')
+        }
       }
     }
     const renderMermaid = async () => {
@@ -303,9 +320,41 @@ export default {
     watch(() => props.content, () => {
       renderMermaid()
     })
-    onMounted(() => {
-      initMermaid()
-      renderMermaid()
+    // 等待Mermaid加载完成
+    const waitForMermaid = () => {
+      return new Promise((resolve, reject) => {
+        if (window.mermaid && typeof window.mermaid.initialize === 'function') {
+          resolve()
+          return
+        }
+
+        let attempts = 0
+        const maxAttempts = 50 // 5秒超时
+
+        const checkMermaid = () => {
+          attempts++
+          if (window.mermaid && typeof window.mermaid.initialize === 'function') {
+            resolve()
+          } else if (attempts >= maxAttempts) {
+            reject(new Error('Mermaid library failed to load'))
+          } else {
+            setTimeout(checkMermaid, 100)
+          }
+        }
+
+        checkMermaid()
+      })
+    }
+
+    onMounted(async () => {
+      try {
+        await waitForMermaid()
+        initMermaid()
+        renderMermaid()
+      } catch (err) {
+        console.error('Mermaid loading failed:', err)
+        error.value = 'Mermaid 库加载失败，请刷新页面重试'
+      }
     })
     onUnmounted(() => {
       if (renderTimeout) clearTimeout(renderTimeout)

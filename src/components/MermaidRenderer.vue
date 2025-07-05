@@ -15,13 +15,6 @@
         <div class="error-icon">⚠️</div>
         <div class="error-message">{{ error }}</div>
       </div>
-
-      <!-- 操作按钮 -->
-      <div v-if="svgContent && !loading && !error" class="mermaid-actions">
-        <button @click="copyToClipboard" class="action-btn" title="复制图表">📋 复制</button>
-        <button @click="downloadSVG" class="action-btn" title="下载SVG">💾 下载</button>
-        <button @click="openLightbox" class="action-btn" title="全屏预览">🔍 预览</button>
-      </div>
     </div>
 
     <!-- 灯箱预览 -->
@@ -378,8 +371,10 @@ onUnmounted(() => {
 .lightbox-content {
   background: white;
   border-radius: 8px;
-  max-width: 90vw;
-  max-height: 90vh;
+  width: 95vw;
+  height: 95vh;
+  max-width: 1400px;
+  max-height: 900px;
   display: flex;
   flex-direction: column;
 }
@@ -404,7 +399,10 @@ onUnmounted(() => {
   flex: 1;
   overflow: hidden;
   position: relative;
-  min-height: 400px;
+  min-height: 600px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .lightbox-image {
@@ -414,6 +412,8 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   transition: transform 0.2s ease;
+  min-width: 800px;
+  min-height: 500px;
 }
 
 .lightbox-controls {
@@ -437,5 +437,29 @@ onUnmounted(() => {
   font-weight: bold;
   min-width: 60px;
   text-align: center;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .lightbox-content {
+    width: 98vw;
+    height: 98vh;
+    max-width: none;
+    max-height: none;
+  }
+
+  .lightbox-image {
+    min-width: auto;
+    min-height: auto;
+  }
+
+  .lightbox-body {
+    min-height: 400px;
+  }
+
+  .lightbox-controls {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
 }
 </style>

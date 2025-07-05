@@ -7,7 +7,7 @@
  * 检测是否在微前端环境中运行
  * @returns {boolean}
  */
-export function isInJingdongMicroApp() {
+export function isInMicroApp() {
   // 检测微前端环境标识
   const hasGlobalFlags = !!(
     window.__MICRO_APP_ENVIRONMENT__ ||
@@ -40,7 +40,7 @@ export function isInJingdongMicroApp() {
  */
 export function getBasePath() {
   // 无论在什么环境下都使用根路径，简化配置
-  if (isInJingdongMicroApp()) {
+  if (isInMicroApp()) {
     console.log('🔍 检测到微前端环境')
   } else {
     console.log('🏠 独立运行模式')

@@ -1,29 +1,21 @@
 export default {
-	async fetch(request, env) {
-		const url = new URL(request.url);
-
-		// CORS头部
+	fetch: async (request, env) => {
 		const corsHeaders = {
 			'Access-Control-Allow-Origin': '*',
-			'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-			'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+			'Access-Control-Allow-Methods': '*',
+			'Access-Control-Allow-Headers': '*',
 		};
 
-		// 处理预检请求
-		if (request.method === 'OPTIONS') {
-			return new Response(null, { status: 200, headers: corsHeaders });
-		}
-
 		// API路由
-		if (url.pathname.startsWith("/api/")) {
-			return Response.json({ name: "Cloudflare" }, { headers: corsHeaders });
+		if (request.url.includes("/api/")) {
+			return Response.json({ message: "This Cloudflare workers Not Support API" }, { headers: corsHeaders });
 		}
 
-		// 静态资源 - 直接交给ASSETS处理，包括SPA fallback
+		// 静态资源
 		const response = await env.ASSETS.fetch(request);
 		return new Response(response.body, {
 			status: response.status,
 			headers: {...response.headers, ...corsHeaders}
 		});
-	},
+	}
 };

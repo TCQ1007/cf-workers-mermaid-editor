@@ -536,7 +536,7 @@ const copyJPG = async () => {
   setTimeout(() => copyStatus.value = '', 3000)
 }
 
-// 下载功能
+// 下载SVG功能
 const downloadSVG = () => {
   const blob = new Blob([svgContent.value], { type: 'image/svg+xml' })
   const url = URL.createObjectURL(blob)
@@ -545,6 +545,40 @@ const downloadSVG = () => {
   a.download = `mermaid-${Date.now()}.svg`
   a.click()
   URL.revokeObjectURL(url)
+}
+
+// 下载PNG功能
+const downloadPNG = async () => {
+  if (!svgContent.value) return
+
+  try {
+    const pngBlob = await svgToImage(svgContent.value, 'png', 2, 0.9, true)
+    const url = URL.createObjectURL(pngBlob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `mermaid-${Date.now()}.png`
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (err) {
+    console.error('PNG下载失败:', err)
+  }
+}
+
+// 下载JPG功能
+const downloadJPG = async () => {
+  if (!svgContent.value) return
+
+  try {
+    const jpgBlob = await svgToImage(svgContent.value, 'jpeg', 2, 0.9, true)
+    const url = URL.createObjectURL(jpgBlob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `mermaid-${Date.now()}.jpg`
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (err) {
+    console.error('JPG下载失败:', err)
+  }
 }
 
 // 防抖渲染
@@ -660,6 +694,8 @@ defineExpose({
   copyPNG,
   copyJPG,
   downloadSVG,
+  downloadPNG,
+  downloadJPG,
   openLightbox
 })
 </script>

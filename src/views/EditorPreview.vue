@@ -75,7 +75,22 @@
               </div>
             </div>
 
-            <button @click="downloadSVG" class="btn btn-small" title="下载SVG">💾 下载</button>
+            <!-- 下载下拉菜单 -->
+            <div class="download-dropdown" @mouseleave="showDownloadMenu = false">
+              <button
+                @click="toggleDownloadMenu"
+                @mouseenter="showDownloadMenu = true"
+                class="btn btn-small download-main-btn"
+                title="下载图表"
+              >
+                💾 下载为 ▼
+              </button>
+              <div v-if="showDownloadMenu" class="download-menu">
+                <button @click="downloadSVG" class="download-option">📄 SVG文件</button>
+                <button @click="downloadPNG" class="download-option">🖼️ PNG图片</button>
+                <button @click="downloadJPG" class="download-option">📸 JPG图片</button>
+              </div>
+            </div>
             <button @click="openLightbox" class="btn btn-small" title="全屏预览">🔍 预览</button>
             <button @click="togglePreview" class="btn btn-small">
               <span class="icon">👁️‍🗨️</span>
@@ -119,6 +134,7 @@ const selectedLanguage = ref("mermaid");
 const showPreview = ref(true);
 const copyStatus = ref("复制");
 const showCopyMenu = ref(false);
+const showDownloadMenu = ref(false);
 const mermaidRendererRef = ref(null);
 const selectedText = ref("");
 const lastSaved = ref("");
@@ -205,10 +221,32 @@ const copyJPG = async () => {
   }
 };
 
+// 下载菜单控制
+const toggleDownloadMenu = () => {
+  showDownloadMenu.value = !showDownloadMenu.value;
+};
+
 // 下载SVG功能
 const downloadSVG = () => {
+  showDownloadMenu.value = false;
   if (mermaidRendererRef.value) {
     mermaidRendererRef.value.downloadSVG();
+  }
+};
+
+// 下载PNG功能
+const downloadPNG = () => {
+  showDownloadMenu.value = false;
+  if (mermaidRendererRef.value) {
+    mermaidRendererRef.value.downloadPNG();
+  }
+};
+
+// 下载JPG功能
+const downloadJPG = () => {
+  showDownloadMenu.value = false;
+  if (mermaidRendererRef.value) {
+    mermaidRendererRef.value.downloadJPG();
   }
 };
 
@@ -597,6 +635,50 @@ body {
 }
 
 .copy-option:not(:last-child) {
+  border-bottom: 1px solid #eee;
+}
+
+/* 下载下拉菜单 */
+.download-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.download-main-btn {
+  min-width: 90px;
+}
+
+.download-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 1000;
+  min-width: 120px;
+  overflow: hidden;
+}
+
+.download-option {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background: white;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+.download-option:hover {
+  background: #f5f5f5;
+}
+
+.download-option:not(:last-child) {
   border-bottom: 1px solid #eee;
 }
 

@@ -24,6 +24,17 @@
         <div class="error-icon">⚠️</div>
         <div class="error-message">{{ error }}</div>
       </div>
+
+      <!-- 操作按钮 -->
+      <div v-if="svgContent && !loading && !error" class="mermaid-actions">
+        <button @click="copySVG" class="action-btn" title="复制SVG代码">📋 SVG</button>
+        <button @click="copyPNG" class="action-btn" title="复制PNG图片">🖼️ PNG</button>
+        <button @click="downloadSVG" class="action-btn" title="下载SVG">💾 下载</button>
+        <button @click="openLightbox" class="action-btn" title="全屏预览">🔍 预览</button>
+      </div>
+
+      <!-- 复制状态提示 -->
+      <div v-if="copyStatus" class="copy-status">{{ copyStatus }}</div>
     </div>
 
     <!-- 灯箱预览 -->
@@ -352,14 +363,111 @@ const startDrag = (event) => {
   document.addEventListener('mouseup', onMouseUp)
 }
 
-// 复制功能
-const copyToClipboard = async () => {
+// 复制状态
+const copyStatus = ref('')
+
+// SVG转PNG功能
+const svgToPng = (svgString, scale = 2) => {
+  return new Promise((resolve, reject) => {
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    const img = new Image()
+
+    img.onload = () => {
+      canvas.width = img.width * scale
+      canvas.height = img.height * scale
+      ctx.scale(scale, scale)
+      ctx.drawImage(img, 0, 0)
+
+      canvas.toBlob(resolve, 'image/png')
+    }
+
+    img.onerror = reject
+
+    const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' })
+    const url = URL.createObjectURL(svgBlob)
+    img.src = url
+  })
+}
+
+// 复制SVG功能
+const copySVG = async () => {
+  if (!svgContent.value) {
+    copyStatus.value = '没有可复制的内容'
+    setTimeout(() => copyStatus.value = '', 2000)
+    return
+  }
+
   try {
-    await navigator.clipboard.writeText(svgContent.value)
-    console.log('图表已复制到剪贴板')
+    // 尝试使用现代API
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(svgContent.value)
+      copyStatus.value = '✅ SVG已复制'
+    } else {
+      // 回退到传统方法
+      const textArea = document.createElement('textarea')
+      textArea.value = svgContent.value
+      textArea.style.position = 'fixed'
+      textArea.style.left = '-999999px'
+      textArea.style.top = '-999999px'
+      document.body.appendChild(textArea)
+      textArea.focus()
+      textArea.select()
+
+      const successful = document.execCommand('copy')
+      document.body.removeChild(textArea)
+
+      if (successful) {
+        copyStatus.value = '✅ SVG已复制'
+      } else {
+        throw new Error('execCommand failed')
+      }
+    }
+
+    console.log('SVG已复制到剪贴板')
   } catch (err) {
     console.error('复制失败:', err)
+    copyStatus.value = '❌ 复制失败'
   }
+
+  // 2秒后清除状态
+  setTimeout(() => copyStatus.value = '', 2000)
+}
+
+// 复制PNG功能
+const copyPNG = async () => {
+  if (!svgContent.value) {
+    copyStatus.value = '没有可复制的内容'
+    setTimeout(() => copyStatus.value = '', 2000)
+    return
+  }
+
+  try {
+    copyStatus.value = '🔄 正在转换PNG...'
+
+    // 将SVG转换为PNG
+    const pngBlob = await svgToPng(svgContent.value)
+
+    if (navigator.clipboard && window.ClipboardItem) {
+      // 使用现代API复制图片
+      const clipboardItem = new ClipboardItem({
+        'image/png': pngBlob
+      })
+      await navigator.clipboard.write([clipboardItem])
+      copyStatus.value = '✅ PNG已复制'
+    } else {
+      // 浏览器不支持复制图片到剪贴板
+      copyStatus.value = '❌ 浏览器不支持复制图片'
+    }
+
+    console.log('PNG已复制到剪贴板')
+  } catch (err) {
+    console.error('PNG复制失败:', err)
+    copyStatus.value = '❌ PNG复制失败'
+  }
+
+  // 3秒后清除状态
+  setTimeout(() => copyStatus.value = '', 3000)
 }
 
 // 下载功能

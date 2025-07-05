@@ -85,6 +85,27 @@ export default {
     let rafId = null
     let currentMousePos = { x: 0, y: 0 }
     let isUpdating = false
+    const loadMermaid = () => {
+      return new Promise((resolve, reject) => {
+        if (window.mermaid) {
+          resolve()
+          return
+        }
+
+        // 动态加载Mermaid，类似Monaco的方式
+        const script = document.createElement('script')
+        script.src = 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js'
+        script.onload = () => {
+          console.log('Mermaid library loaded successfully')
+          resolve()
+        }
+        script.onerror = () => {
+          reject(new Error('Failed to load Mermaid library'))
+        }
+        document.head.appendChild(script)
+      })
+    }
+
     const initMermaid = () => {
       if (!window.mermaid) {
         console.error("Mermaid library not found");
@@ -311,9 +332,15 @@ export default {
     watch(() => props.content, () => {
       renderMermaid()
     })
-    onMounted(() => {
-      initMermaid()
-      renderMermaid()
+    onMounted(async () => {
+      try {
+        await loadMermaid()
+        initMermaid()
+        renderMermaid()
+      } catch (err) {
+        console.error('Failed to load Mermaid:', err)
+        error.value = 'Mermaid 库加载失败，请刷新页面重试'
+      }
     })
     onUnmounted(() => {
       if (renderTimeout) clearTimeout(renderTimeout)

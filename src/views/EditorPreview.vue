@@ -6,7 +6,8 @@
         <span class="subtitle">专业的 Mermaid 语法编辑器</span>
       </div>
       <div class="toolbar">
-        <button @click="openPreviewWindow" class="btn btn-primary">🪟 新窗口预览</button>
+        <button @click="openPreviewWindow" class="btn btn-primary preview-window-btn">🪟 新窗口预览</button>
+        <GitHubCorner href="https://github.com/TCQ1007/cf-workers-mermaid-editor" />
       </div>
     </div>
     <div class="content" :class="{ 'split-view': showPreview }">
@@ -89,6 +90,7 @@ import { ref, computed, onMounted, onUnmounted } from "vue";
 import MonacoEditor from "../components/MonacoEditor.vue";
 import MermaidRenderer from "../components/MermaidRenderer.vue";
 import AboutModal from "../components/AboutModal.vue";
+import GitHubCorner from "../components/GitHubCorner.vue";
 
 const editorRef = ref(null);
 const code = ref("");
@@ -392,9 +394,9 @@ const handlePreviewWindowMessage = (event) => {
 const showAbout = ref(false);
 
 onMounted(() => {
-  if (!localStorage.getItem('aboutModalShown')) {
+  if (!localStorage.getItem("aboutModalShown")) {
     showAbout.value = true;
-    localStorage.setItem('aboutModalShown', '1');
+    localStorage.setItem("aboutModalShown", "1");
   }
 });
 </script>
@@ -424,6 +426,50 @@ body {
   width: 100% !important;
   overflow: hidden !important;
   box-sizing: border-box !important;
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 44px;
+  padding: 0 1.5rem;
+  background: #fff;
+  border-bottom: 1px solid #e0e0e0;
+}
+.top-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+}
+.github-link {
+  color: #24292f;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.github-link:hover {
+  color: #0366d6;
+}
+.github-link-fixed {
+  position: fixed;
+  top: 16px;
+  right: 24px;
+  z-index: 1002;
+  color: #24292f;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  padding: 4px;
+  transition: color 0.2s, box-shadow 0.2s;
+}
+.github-link-fixed:hover {
+  color: #0366d6;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 </style>
 
@@ -461,8 +507,11 @@ body {
 
 .toolbar {
   display: flex;
-  gap: 0.75rem;
   align-items: center;
+  gap: 1rem;
+}
+.preview-window-btn {
+  margin-right: 56px;
 }
 
 .toolbar-group {

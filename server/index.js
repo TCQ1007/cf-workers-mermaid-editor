@@ -28,19 +28,12 @@ export default {
 			});
 		} catch {
 			// SPA应用：对于不存在的路由，返回index.html让前端路由处理
-			try {
-				const indexRequest = new Request(new URL('/', request.url), request);
-				const indexResponse = await env.ASSETS.fetch(indexRequest);
-				return new Response(indexResponse.body, {
-					status: 200,
-					headers: { ...indexResponse.headers, ...corsHeaders }
-				});
-			} catch {
+
 				return new Response('Not Found', {
 					status: 404,
 					headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
 				});
-			}
+			
 		}
 	},
 };

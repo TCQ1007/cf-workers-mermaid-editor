@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import EditorPreview from '../views/EditorPreview.vue'
 import PreviewWindow from '../views/PreviewWindow.vue'
+import NotFound from '../views/NotFound.vue'
 import { getBasePath, microAppLifecycle } from '../config/microapp.js'
 
 const basePath = getBasePath()
@@ -19,7 +20,7 @@ const routes = [
   {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
-    redirect: '/'
+    component: NotFound
   }
 ]
 

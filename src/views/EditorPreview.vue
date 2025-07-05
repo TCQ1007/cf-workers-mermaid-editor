@@ -58,7 +58,25 @@
         <div class="section-header">
           <h3>图表预览</h3>
           <div class="preview-controls">
-            <button @click="copyChartAsImage" class="btn btn-small">📋 复制图表</button>
+            <!-- 复制下拉菜单 -->
+            <div class="copy-dropdown" @mouseleave="showCopyMenu = false">
+              <button
+                @click="toggleCopyMenu"
+                @mouseenter="showCopyMenu = true"
+                class="btn btn-small copy-main-btn"
+                title="复制图表"
+              >
+                📋 复制为 ▼
+              </button>
+              <div v-if="showCopyMenu" class="copy-menu">
+                <button @click="copySVG" class="copy-option">📄 SVG代码</button>
+                <button @click="copyPNG" class="copy-option">🖼️ PNG图片</button>
+                <button @click="copyJPG" class="copy-option">📸 JPG图片</button>
+              </div>
+            </div>
+
+            <button @click="downloadSVG" class="btn btn-small" title="下载SVG">💾 下载</button>
+            <button @click="openLightbox" class="btn btn-small" title="全屏预览">🔍 预览</button>
             <button @click="togglePreview" class="btn btn-small">
               <span class="icon">👁️‍🗨️</span>
               收起
@@ -67,7 +85,7 @@
         </div>
         <div class="preview-container">
           <div class="preview-content">
-            <MermaidRenderer :content="code" />
+            <MermaidRenderer ref="mermaidRendererRef" :content="code" />
           </div>
         </div>
       </div>
@@ -100,6 +118,8 @@ const code = ref("");
 const selectedLanguage = ref("mermaid");
 const showPreview = ref(true);
 const copyStatus = ref("复制");
+const showCopyMenu = ref(false);
+const mermaidRendererRef = ref(null);
 const selectedText = ref("");
 const lastSaved = ref("");
 const editorWidth = ref(40); // 默认40%宽度
@@ -156,78 +176,46 @@ const copyToClipboard = async () => {
     document.body.removeChild(textArea);
   }
 };
-const copyChartAsImage = async () => {
-  try {
-    const svgElement = document.querySelector(".preview-content svg");
-    if (!svgElement) {
-      alert("未找到图表，请确保图表已正确渲染");
-      return;
-    }
+// 下拉菜单控制
+const toggleCopyMenu = () => {
+  showCopyMenu.value = !showCopyMenu.value;
+};
 
-    // 直接将SVG转换为PNG，使用现代浏览器的方法
-    try {
-      // 获取SVG的完整HTML
-      const svgData = new XMLSerializer().serializeToString(svgElement);
+// 复制SVG功能
+const copySVG = async () => {
+  showCopyMenu.value = false;
+  if (mermaidRendererRef.value) {
+    await mermaidRendererRef.value.copySVG();
+  }
+};
 
-      // 创建一个包含SVG的完整HTML文档
-      const svgWithStyles = `
-        <svg xmlns="http://www.w3.org/2000/svg" 
-             width="${
-               svgElement.getAttribute("width") ||
-               svgElement.viewBox?.baseVal?.width ||
-               800
-             }" 
-             height="${
-               svgElement.getAttribute("height") ||
-               svgElement.viewBox?.baseVal?.height ||
-               600
-             }"
-             style="background: white; font-family: Arial, sans-serif;">
-          ${svgElement.innerHTML}
-        </svg>
-      `;
+// 复制PNG功能
+const copyPNG = async () => {
+  showCopyMenu.value = false;
+  if (mermaidRendererRef.value) {
+    await mermaidRendererRef.value.copyPNG();
+  }
+};
 
-      // 创建blob
-      const blob = new Blob([svgWithStyles], { type: "image/svg+xml" });
+// 复制JPG功能
+const copyJPG = async () => {
+  showCopyMenu.value = false;
+  if (mermaidRendererRef.value) {
+    await mermaidRendererRef.value.copyJPG();
+  }
+};
 
-      // 尝试复制到剪贴板
-      if (navigator.clipboard && window.ClipboardItem) {
-        try {
-          await navigator.clipboard.write([
-            new ClipboardItem({
-              "image/svg+xml": blob,
-            }),
-          ]);
-          alert("图表已复制为SVG到剪贴板");
-          return;
-        } catch (clipboardErr) {
-          console.log("SVG复制失败，尝试PNG方式");
-        }
-      }
+// 下载SVG功能
+const downloadSVG = () => {
+  if (mermaidRendererRef.value) {
+    mermaidRendererRef.value.downloadSVG();
+  }
+};
 
-      // 如果SVG复制失败，尝试PNG方式
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "mermaid-chart.svg";
-      a.click();
-      URL.revokeObjectURL(url);
-      alert("图表已下载为SVG文件");
-    } catch (err) {
-      console.error("SVG处理失败:", err);
-
-      // 备用方案：直接复制SVG代码
-      try {
-        const svgCode = new XMLSerializer().serializeToString(svgElement);
-        await navigator.clipboard.writeText(svgCode);
-        alert("SVG代码已复制到剪贴板");
-      } catch (textErr) {
-        alert("图表复制失败，请手动保存");
-      }
-    }
-  } catch (err) {
-    console.error("复制图表失败:", err);
-    alert("复制图表失败");
+// 打开灯箱预览
+const openLightbox = () => {
+  if (mermaidRendererRef.value) {
+    mermaidRendererRef.value.openLightbox();
   }
 };
 const clearEditor = () => {
@@ -566,6 +554,50 @@ body {
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
   border: 1px solid rgba(40, 167, 69, 0.2);
+}
+
+/* 复制下拉菜单 */
+.copy-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.copy-main-btn {
+  min-width: 90px;
+}
+
+.copy-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 1000;
+  min-width: 120px;
+  overflow: hidden;
+}
+
+.copy-option {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background: white;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+.copy-option:hover {
+  background: #f5f5f5;
+}
+
+.copy-option:not(:last-child) {
+  border-bottom: 1px solid #eee;
 }
 
 .toolbar-group {

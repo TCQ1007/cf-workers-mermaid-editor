@@ -25,29 +25,6 @@
         <div class="error-message">{{ error }}</div>
       </div>
 
-      <!-- 操作按钮 -->
-      <div v-if="svgContent && !loading && !error" class="mermaid-actions">
-        <!-- 复制下拉菜单 -->
-        <div class="copy-dropdown" @mouseleave="showCopyMenu = false">
-          <button
-            @click="toggleCopyMenu"
-            @mouseenter="showCopyMenu = true"
-            class="action-btn copy-main-btn"
-            title="复制图表"
-          >
-            📋 复制为 ▼
-          </button>
-          <div v-if="showCopyMenu" class="copy-menu">
-            <button @click="copySVG" class="copy-option">📄 SVG代码</button>
-            <button @click="copyPNG" class="copy-option">🖼️ PNG图片</button>
-            <button @click="copyJPG" class="copy-option">📸 JPG图片</button>
-          </div>
-        </div>
-
-        <button @click="downloadSVG" class="action-btn" title="下载SVG">💾 下载</button>
-        <button @click="openLightbox" class="action-btn" title="全屏预览">🔍 预览</button>
-      </div>
-
       <!-- 复制状态提示 -->
       <div v-if="copyStatus" class="copy-status">{{ copyStatus }}</div>
     </div>
@@ -383,7 +360,7 @@ const copyStatus = ref('')
 const showCopyMenu = ref(false)
 
 // SVG转图片功能
-const svgToImage = (svgString, format = 'png', scale = 2, quality = 0.9) => {
+const svgToImage = (svgString, format = 'png', scale = 2, quality = 0.9, withBackground = true) => {
   return new Promise((resolve, reject) => {
     const canvas = document.createElement('canvas')
     const ctx = canvas.getContext('2d')
@@ -393,8 +370,8 @@ const svgToImage = (svgString, format = 'png', scale = 2, quality = 0.9) => {
       canvas.width = img.width * scale
       canvas.height = img.height * scale
 
-      // JPG需要白色背景
-      if (format === 'jpeg') {
+      // 为PNG和JPG添加白色背景
+      if (withBackground && (format === 'jpeg' || format === 'png')) {
         ctx.fillStyle = 'white'
         ctx.fillRect(0, 0, canvas.width, canvas.height)
       }
@@ -476,8 +453,8 @@ const copyPNG = async () => {
   try {
     copyStatus.value = '🔄 正在转换PNG...'
 
-    // 将SVG转换为PNG
-    const pngBlob = await svgToImage(svgContent.value, 'png')
+    // 将SVG转换为PNG（带白色背景）
+    const pngBlob = await svgToImage(svgContent.value, 'png', 2, 0.9, true)
 
     if (navigator.clipboard && window.ClipboardItem) {
       // 使用现代API复制图片
@@ -513,25 +490,46 @@ const copyJPG = async () => {
   try {
     copyStatus.value = '🔄 正在转换JPG...'
 
-    // 将SVG转换为JPG
-    const jpgBlob = await svgToImage(svgContent.value, 'jpeg', 2, 0.9)
+    // 将SVG转换为JPG（带白色背景）
+    const jpgBlob = await svgToImage(svgContent.value, 'jpeg', 2, 0.9, true)
 
     if (navigator.clipboard && window.ClipboardItem) {
-      // 使用现代API复制图片
-      const clipboardItem = new ClipboardItem({
-        'image/jpeg': jpgBlob
-      })
-      await navigator.clipboard.write([clipboardItem])
-      copyStatus.value = '✅ JPG已复制'
+      try {
+        // 检查浏览器是否支持JPG格式
+        const clipboardItem = new ClipboardItem({
+          'image/jpeg': jpgBlob
+        })
+        await navigator.clipboard.write([clipboardItem])
+        copyStatus.value = '✅ JPG已复制'
+        console.log('JPG已复制到剪贴板')
+      } catch (clipboardErr) {
+        console.warn('JPG剪贴板复制失败，尝试PNG格式:', clipboardErr)
+        // 回退到PNG格式
+        try {
+          const pngBlob = await svgToImage(svgContent.value, 'png', 2, 0.9, true)
+          const pngClipboardItem = new ClipboardItem({
+            'image/png': pngBlob
+          })
+          await navigator.clipboard.write([pngClipboardItem])
+          copyStatus.value = '✅ 已复制为PNG (JPG不支持)'
+        } catch (pngErr) {
+          throw new Error('PNG回退也失败')
+        }
+      }
     } else {
-      // 浏览器不支持复制图片到剪贴板
-      copyStatus.value = '❌ 浏览器不支持复制图片'
+      // 浏览器不支持复制图片到剪贴板，提供下载
+      copyStatus.value = '⬇️ 浏览器不支持复制，开始下载...'
+      const url = URL.createObjectURL(jpgBlob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `mermaid-${Date.now()}.jpg`
+      a.click()
+      URL.revokeObjectURL(url)
+      copyStatus.value = '✅ JPG已下载'
     }
-
-    console.log('JPG已复制到剪贴板')
   } catch (err) {
     console.error('JPG复制失败:', err)
-    copyStatus.value = '❌ JPG复制失败'
+    copyStatus.value = '❌ JPG复制失败: ' + (err.message || '未知错误')
   }
 
   // 3秒后清除状态
@@ -654,6 +652,15 @@ onUnmounted(() => {
   if (showLightbox.value) {
     closeLightbox()
   }
+})
+
+// 暴露方法给父组件
+defineExpose({
+  copySVG,
+  copyPNG,
+  copyJPG,
+  downloadSVG,
+  openLightbox
 })
 </script>
 

@@ -86,11 +86,13 @@ export default {
     let currentMousePos = { x: 0, y: 0 }
     let isUpdating = false
     const initMermaid = () => {
-      try {
-        if (!window.mermaid) {
-          throw new Error('Mermaid library not loaded')
-        }
+      if (!window.mermaid) {
+        console.error("Mermaid library not found");
+        error.value = 'Mermaid 库未加载'
+        return;
+      }
 
+      try {
         // 在微前端环境中使用更安全的配置
         const isMicroApp = isInJingdongMicroApp()
         const config = {
@@ -124,17 +126,6 @@ export default {
       } catch (err) {
         console.error('Failed to initialize Mermaid:', err)
         error.value = '无法初始化 Mermaid 渲染器'
-
-        // 在微前端环境中向父应用报告错误
-        if (isInJingdongMicroApp() && window.parent !== window) {
-          window.parent.postMessage({
-            type: 'MICRO_APP_ERROR',
-            name: 'mermaid',
-            component: 'MermaidRenderer',
-            error: err.message,
-            timestamp: Date.now()
-          }, '*')
-        }
       }
     }
     const renderMermaid = async () => {
@@ -320,41 +311,9 @@ export default {
     watch(() => props.content, () => {
       renderMermaid()
     })
-    // 等待Mermaid加载完成
-    const waitForMermaid = () => {
-      return new Promise((resolve, reject) => {
-        if (window.mermaid && typeof window.mermaid.initialize === 'function') {
-          resolve()
-          return
-        }
-
-        let attempts = 0
-        const maxAttempts = 50 // 5秒超时
-
-        const checkMermaid = () => {
-          attempts++
-          if (window.mermaid && typeof window.mermaid.initialize === 'function') {
-            resolve()
-          } else if (attempts >= maxAttempts) {
-            reject(new Error('Mermaid library failed to load'))
-          } else {
-            setTimeout(checkMermaid, 100)
-          }
-        }
-
-        checkMermaid()
-      })
-    }
-
-    onMounted(async () => {
-      try {
-        await waitForMermaid()
-        initMermaid()
-        renderMermaid()
-      } catch (err) {
-        console.error('Mermaid loading failed:', err)
-        error.value = 'Mermaid 库加载失败，请刷新页面重试'
-      }
+    onMounted(() => {
+      initMermaid()
+      renderMermaid()
     })
     onUnmounted(() => {
       if (renderTimeout) clearTimeout(renderTimeout)

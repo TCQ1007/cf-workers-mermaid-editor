@@ -80,6 +80,13 @@ const emit = defineEmits(["change", "selection-change"]);
         verticalScrollbarSize: 10,
         horizontalScrollbarSize: 10,
       },
+      // 禁用语言检查和诊断
+      'semanticHighlighting.enabled': false,
+      unicodeHighlight: {
+        nonBasicASCII: false,
+        invisibleCharacters: false,
+        ambiguousCharacters: false,
+      },
     };
 
     // 加载保存的字体大小
@@ -151,6 +158,20 @@ const emit = defineEmits(["change", "selection-change"]);
         });
 
         window.require(["vs/editor/editor.main"], () => {
+          // 禁用全局诊断服务
+          if (window.monaco.languages.typescript) {
+            window.monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+              noSemanticValidation: true,
+              noSyntaxValidation: true,
+              noSuggestionDiagnostics: true,
+            });
+            window.monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
+              noSemanticValidation: true,
+              noSyntaxValidation: true,
+              noSuggestionDiagnostics: true,
+            });
+          }
+
           const editorOptions = {
             ...defaultOptions,
             ...props.options,
@@ -205,6 +226,10 @@ const emit = defineEmits(["change", "selection-change"]);
       if (!editor) return;
       const model = editor.getModel();
       if (!model) return;
+
+      // 禁用所有诊断和标记
+      window.monaco.editor.setModelMarkers(model, 'owner', []);
+
       model.updateOptions({
         tabSize: 2,
         insertSpaces: true,

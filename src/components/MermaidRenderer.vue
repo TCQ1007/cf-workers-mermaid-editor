@@ -2,7 +2,16 @@
   <div class="mermaid-renderer">
     <!-- 图表容器 - 始终存在 -->
     <div class="mermaid-container">
-      <div ref="mermaidContainer" class="mermaid-content" @click="openLightbox"></div>
+      <div
+        ref="mermaidContainer"
+        class="mermaid-content interactive-preview"
+        :style="previewTransformStyle"
+        @click="openLightbox"
+        @wheel="handlePreviewWheel"
+        @mousedown="handlePreviewMouseDown"
+        @mouseenter="onPreviewEnter"
+        @mouseleave="onPreviewLeave"
+      ></div>
 
       <!-- 加载状态覆盖层 -->
       <div v-if="loading" class="status-overlay loading">
@@ -69,11 +78,26 @@ const translateX = ref(0)
 const translateY = ref(0)
 const isDragging = ref(false)
 
+// 预览窗口状态
+const previewScale = ref(1)
+const previewTranslateX = ref(0)
+const previewTranslateY = ref(0)
+const isPreviewDragging = ref(false)
+const isPreviewHovered = ref(false)
+
 // 计算属性
 const imageStyle = computed(() => ({
   transform: `scale(${scale.value}) translate(${translateX.value}px, ${translateY.value}px)`,
   cursor: isDragging.value ? 'grabbing' : 'grab',
   willChange: isDragging.value ? 'transform' : 'auto'
+}))
+
+// 预览窗口变换样式
+const previewTransformStyle = computed(() => ({
+  transform: `scale(${previewScale.value}) translate(${previewTranslateX.value}px, ${previewTranslateY.value}px)`,
+  cursor: isPreviewDragging.value ? 'grabbing' : (isPreviewHovered.value ? 'grab' : 'pointer'),
+  willChange: isPreviewDragging.value ? 'transform' : 'auto',
+  transformOrigin: 'center center'
 }))
 
 // Mermaid初始化
@@ -364,6 +388,86 @@ onMounted(async () => {
   renderMermaid()
 })
 
+// 预览窗口交互功能
+const onPreviewEnter = () => {
+  isPreviewHovered.value = true
+}
+
+const onPreviewLeave = () => {
+  isPreviewHovered.value = false
+}
+
+// 预览窗口滚轮缩放
+const handlePreviewWheel = (event) => {
+  if (!isPreviewHovered.value) return
+
+  event.preventDefault()
+  event.stopPropagation()
+
+  const delta = event.deltaY > 0 ? 0.9 : 1.1
+  const newScale = Math.max(0.2, Math.min(5, previewScale.value * delta))
+
+  // 以鼠标位置为中心缩放
+  const rect = event.currentTarget.getBoundingClientRect()
+  const centerX = rect.width / 2
+  const centerY = rect.height / 2
+  const mouseX = event.clientX - rect.left
+  const mouseY = event.clientY - rect.top
+
+  // 计算缩放后的位移调整
+  const scaleRatio = newScale / previewScale.value
+  const deltaX = (mouseX - centerX) * (1 - scaleRatio)
+  const deltaY = (mouseY - centerY) * (1 - scaleRatio)
+
+  previewScale.value = newScale
+  previewTranslateX.value += deltaX / newScale
+  previewTranslateY.value += deltaY / newScale
+}
+
+// 预览窗口鼠标按下处理
+const handlePreviewMouseDown = (event) => {
+  // 只处理中键（滚轮按下）
+  if (event.button !== 1) return
+
+  event.preventDefault()
+  event.stopPropagation()
+
+  isPreviewDragging.value = true
+  const startX = event.clientX - previewTranslateX.value
+  const startY = event.clientY - previewTranslateY.value
+
+  // 禁用文字选择
+  document.body.style.userSelect = 'none'
+
+  const onMouseMove = (e) => {
+    if (!isPreviewDragging.value) return
+
+    requestAnimationFrame(() => {
+      previewTranslateX.value = e.clientX - startX
+      previewTranslateY.value = e.clientY - startY
+    })
+  }
+
+  const onMouseUp = () => {
+    isPreviewDragging.value = false
+    document.removeEventListener('mousemove', onMouseMove, { passive: false })
+    document.removeEventListener('mouseup', onMouseUp)
+
+    // 恢复文字选择
+    document.body.style.userSelect = ''
+  }
+
+  document.addEventListener('mousemove', onMouseMove, { passive: false })
+  document.addEventListener('mouseup', onMouseUp)
+}
+
+// 重置预览窗口缩放
+const resetPreviewZoom = () => {
+  previewScale.value = 1
+  previewTranslateX.value = 0
+  previewTranslateY.value = 0
+}
+
 // 组件卸载
 onUnmounted(() => {
   if (showLightbox.value) {
@@ -435,7 +539,20 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   cursor: pointer;
-  overflow: auto;
+  overflow: hidden;
+  transition: transform 0.1s ease-out;
+}
+
+.interactive-preview {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+.interactive-preview:hover {
+  /* 鼠标悬停时的视觉提示 */
+  box-shadow: inset 0 0 0 2px rgba(33, 150, 243, 0.3);
 }
 
 /* 操作按钮 */

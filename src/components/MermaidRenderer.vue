@@ -1,23 +1,23 @@
 <template>
   <div class="mermaid-renderer">
-    <!-- 加载状态 -->
-    <div v-if="loading" class="status loading">
-      <div class="spinner"></div>
-      <span>正在渲染图表...</span>
-    </div>
-    
-    <!-- 错误状态 -->
-    <div v-else-if="error" class="status error">
-      <div class="error-icon">⚠️</div>
-      <div class="error-message">{{ error }}</div>
-    </div>
-    
-    <!-- 图表内容 -->
-    <div v-else class="mermaid-container">
+    <!-- 图表容器 - 始终存在 -->
+    <div class="mermaid-container">
       <div ref="mermaidContainer" class="mermaid-content" @click="openLightbox"></div>
 
+      <!-- 加载状态覆盖层 -->
+      <div v-if="loading" class="status-overlay loading">
+        <div class="spinner"></div>
+        <span>正在渲染图表...</span>
+      </div>
+
+      <!-- 错误状态覆盖层 -->
+      <div v-if="error" class="status-overlay error">
+        <div class="error-icon">⚠️</div>
+        <div class="error-message">{{ error }}</div>
+      </div>
+
       <!-- 操作按钮 -->
-      <div v-if="svgContent" class="mermaid-actions">
+      <div v-if="svgContent && !loading && !error" class="mermaid-actions">
         <button @click="copyToClipboard" class="action-btn" title="复制图表">📋 复制</button>
         <button @click="downloadSVG" class="action-btn" title="下载SVG">💾 下载</button>
         <button @click="openLightbox" class="action-btn" title="全屏预览">🔍 预览</button>
@@ -278,17 +278,24 @@ onUnmounted(() => {
   height: 100%;
 }
 
-/* 状态样式 */
-.status {
+/* 状态覆盖层样式 */
+.status-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem;
+  background: rgba(255, 255, 255, 0.9);
+  z-index: 10;
   text-align: center;
 }
 
 .loading {
   color: #666;
+  flex-direction: column;
 }
 
 .spinner {

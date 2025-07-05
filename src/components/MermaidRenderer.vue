@@ -49,6 +49,11 @@
             @mousedown="startDrag"
             v-html="svgContent"
           ></div>
+
+          <!-- 操作提示 -->
+          <div class="interaction-hint">
+            <span>💡 滚轮缩放 | 中键拖拽</span>
+          </div>
         </div>
       </div>
     </div>
@@ -88,14 +93,14 @@ const isPreviewHovered = ref(false)
 // 计算属性
 const imageStyle = computed(() => ({
   transform: `scale(${scale.value}) translate(${translateX.value}px, ${translateY.value}px)`,
-  cursor: isDragging.value ? 'grabbing' : 'grab',
+  cursor: isDragging.value ? 'grabbing' : 'default',
   willChange: isDragging.value ? 'transform' : 'auto'
 }))
 
 // 预览窗口变换样式
 const previewTransformStyle = computed(() => ({
   transform: `scale(${previewScale.value}) translate(${previewTranslateX.value}px, ${previewTranslateY.value}px)`,
-  cursor: isPreviewDragging.value ? 'grabbing' : (isPreviewHovered.value ? 'grab' : 'pointer'),
+  cursor: isPreviewDragging.value ? 'grabbing' : 'pointer',
   willChange: isPreviewDragging.value ? 'transform' : 'auto',
   transformOrigin: 'center center'
 }))
@@ -308,10 +313,10 @@ const handleWheel = (event) => {
   scale.value = Math.max(0.2, Math.min(5, scale.value * delta))
 }
 
-// 拖拽功能
+// 拖拽功能 - 使用中键拖拽
 const startDrag = (event) => {
-  // 只在左键点击时拖拽
-  if (event.button !== 0) return
+  // 只在中键（滚轮按下）时拖拽
+  if (event.button !== 1) return
 
   event.preventDefault()
   event.stopPropagation()
@@ -707,6 +712,26 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* 操作提示 */
+.interaction-hint {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  pointer-events: none;
+  opacity: 0.8;
+  transition: opacity 0.3s ease;
+}
+
+.lightbox-body:hover .interaction-hint {
+  opacity: 1;
 }
 
 /* 响应式设计 */

@@ -22,24 +22,23 @@
       <div class="lightbox-content" @click.stop>
         <div class="lightbox-header">
           <h3>图表预览</h3>
-          <button @click="closeLightbox" class="close-btn">✕</button>
+          <div class="header-controls">
+            <button @click="zoomOut" class="zoom-btn">🔍-</button>
+            <span class="zoom-level">{{ Math.round(scale * 100) }}%</span>
+            <button @click="zoomIn" class="zoom-btn">🔍+</button>
+            <button @click="resetZoom" class="reset-btn">重置</button>
+            <button @click="closeLightbox" class="close-btn">✕</button>
+          </div>
         </div>
-        
+
         <div class="lightbox-body">
-          <div 
+          <div
             class="lightbox-image"
             :style="imageStyle"
             @wheel="handleWheel"
             @mousedown="startDrag"
             v-html="svgContent"
           ></div>
-        </div>
-        
-        <div class="lightbox-controls">
-          <button @click="zoomOut" class="zoom-btn">🔍-</button>
-          <span class="zoom-level">{{ Math.round(scale * 100) }}%</span>
-          <button @click="zoomIn" class="zoom-btn">🔍+</button>
-          <button @click="resetZoom" class="reset-btn">重置</button>
         </div>
       </div>
     </div>
@@ -72,7 +71,8 @@ const isDragging = ref(false)
 // 计算属性
 const imageStyle = computed(() => ({
   transform: `scale(${scale.value}) translate(${translateX.value}px, ${translateY.value}px)`,
-  cursor: isDragging.value ? 'grabbing' : (scale.value > 1 ? 'grab' : 'default')
+  cursor: isDragging.value ? 'grabbing' : 'grab',
+  willChange: isDragging.value ? 'transform' : 'auto'
 }))
 
 // Mermaid初始化
@@ -194,24 +194,40 @@ const handleWheel = (event) => {
 
 // 拖拽功能
 const startDrag = (event) => {
-  if (scale.value <= 1) return
-  
+  // 只在左键点击时拖拽
+  if (event.button !== 0) return
+
+  event.preventDefault()
+  event.stopPropagation()
+
   isDragging.value = true
   const startX = event.clientX - translateX.value
   const startY = event.clientY - translateY.value
 
+  // 禁用文字选择
+  document.body.style.userSelect = 'none'
+
   const onMouseMove = (e) => {
-    translateX.value = e.clientX - startX
-    translateY.value = e.clientY - startY
+    if (!isDragging.value) return
+
+    // 使用requestAnimationFrame优化性能
+    requestAnimationFrame(() => {
+      translateX.value = e.clientX - startX
+      translateY.value = e.clientY - startY
+    })
   }
 
   const onMouseUp = () => {
     isDragging.value = false
-    document.removeEventListener('mousemove', onMouseMove)
+    document.removeEventListener('mousemove', onMouseMove, { passive: false })
     document.removeEventListener('mouseup', onMouseUp)
+
+    // 恢复文字选择
+    document.body.style.userSelect = ''
   }
 
-  document.addEventListener('mousemove', onMouseMove)
+  // 使用passive: false确保preventDefault生效
+  document.addEventListener('mousemove', onMouseMove, { passive: false })
   document.addEventListener('mouseup', onMouseUp)
 }
 
@@ -383,16 +399,42 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem;
+  padding: 0.5rem 1rem;
   border-bottom: 1px solid #eee;
+  min-height: 50px;
+}
+
+.lightbox-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .close-btn {
   background: none;
-  border: none;
-  font-size: 1.5rem;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  padding: 0.2rem 0.4rem;
+  font-size: 1rem;
   cursor: pointer;
   color: #666;
+  margin-left: 0.5rem;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+}
+
+.close-btn:hover {
+  background: #f5f5f5;
 }
 
 .lightbox-body {
@@ -411,32 +453,40 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.2s ease;
   min-width: 800px;
   min-height: 500px;
-}
-
-.lightbox-controls {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  padding: 1rem;
-  border-top: 1px solid #eee;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 .zoom-btn, .reset-btn {
-  padding: 0.5rem 1rem;
+  padding: 0.2rem 0.4rem;
   border: 1px solid #ddd;
   background: white;
-  border-radius: 4px;
+  border-radius: 3px;
   cursor: pointer;
+  font-size: 0.85rem;
+  height: 28px;
+  display: flex;
+  align-items: center;
+}
+
+.zoom-btn:hover, .reset-btn:hover {
+  background: #f5f5f5;
 }
 
 .zoom-level {
-  font-weight: bold;
-  min-width: 60px;
+  font-weight: 500;
+  min-width: 45px;
   text-align: center;
+  font-size: 0.85rem;
+  color: #666;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* 响应式设计 */
@@ -457,9 +507,19 @@ onUnmounted(() => {
     min-height: 400px;
   }
 
-  .lightbox-controls {
+  .header-controls {
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.25rem;
+  }
+
+  .lightbox-header h3 {
+    font-size: 1rem;
+    margin: 0;
+  }
+
+  .zoom-btn, .reset-btn, .close-btn {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.8rem;
   }
 }
 </style>

@@ -39,21 +39,15 @@ export function isInJingdongMicroApp() {
  * @returns {string}
  */
 export function getBasePath() {
-  if (isInJingdongMicroApp()) {
-    // 在微前端环境下，从当前路径中提取第一段作为前缀
-    const pathSegments = window.location.pathname.split('/').filter(Boolean)
-    if (pathSegments.length > 0) {
-      const prefix = `/${pathSegments[0]}`
-      console.log(`🔍 检测到微前端环境，使用路由前缀: ${prefix}`)
-      return prefix
-    }
-    // 如果没有路径段，使用默认前缀
-    console.log('🔍 检测到微前端环境，使用默认路由前缀: /mermaid')
-    return '/mermaid'
+  if (!isInJingdongMicroApp()) {
+    console.log('🏠 独立运行模式')
+    return '/'
   }
 
-  console.log('🏠 独立运行模式，不使用路由前缀')
-  return '/'
+  const firstSegment = window.location.pathname.split('/')[1]
+  const prefix = firstSegment ? `/${firstSegment}` : '/mermaid'
+  console.log(`🔍 微前端环境，路由前缀: ${prefix}`)
+  return prefix
 }
 
 /**

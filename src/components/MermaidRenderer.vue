@@ -26,6 +26,7 @@
             <button @click="zoomOut" class="zoom-btn">🔍-</button>
             <span class="zoom-level">{{ Math.round(scale * 100) }}%</span>
             <button @click="zoomIn" class="zoom-btn">🔍+</button>
+            <button @click="fitToWindow" class="fit-btn">适应窗口</button>
             <button @click="resetZoom" class="reset-btn">重置</button>
             <button @click="closeLightbox" class="close-btn">✕</button>
           </div>
@@ -158,11 +159,102 @@ const renderMermaid = async () => {
   }
 }
 
+// 计算SVG的实际尺寸
+const getSVGDimensions = () => {
+  if (!svgContent.value) return { width: 0, height: 0 }
+
+  const parser = new DOMParser()
+  const svgDoc = parser.parseFromString(svgContent.value, 'image/svg+xml')
+  const svgElement = svgDoc.querySelector('svg')
+
+  if (!svgElement) return { width: 0, height: 0 }
+
+  // 尝试从viewBox获取尺寸
+  const viewBox = svgElement.getAttribute('viewBox')
+  if (viewBox) {
+    const [, , width, height] = viewBox.split(' ').map(Number)
+    return { width, height }
+  }
+
+  // 尝试从width/height属性获取
+  const width = parseFloat(svgElement.getAttribute('width')) || 800
+  const height = parseFloat(svgElement.getAttribute('height')) || 600
+
+  return { width, height }
+}
+
+// 计算适合窗口的缩放比例
+const calculateFitScale = () => {
+  const { width: svgWidth, height: svgHeight } = getSVGDimensions()
+  if (svgWidth === 0 || svgHeight === 0) return 1
+
+  // 获取弹窗内容区域的实际尺寸
+  const lightboxContent = document.querySelector('.lightbox-content')
+  if (!lightboxContent) return 1
+
+  const contentRect = lightboxContent.getBoundingClientRect()
+
+  // 计算可用的显示区域（减去标题栏和padding）
+  const headerHeight = 50 // 标题栏高度
+  const padding = 40 // 内边距
+
+  const availableWidth = contentRect.width - padding
+  const availableHeight = contentRect.height - headerHeight - padding
+
+  // 计算缩放比例，让内容尽可能填满可用空间
+  const scaleX = availableWidth / svgWidth
+  const scaleY = availableHeight / svgHeight
+
+  // 选择较小的比例，确保内容完全可见，但允许超过100%
+  const fitScale = Math.min(scaleX, scaleY)
+
+  // 设置合理的缩放范围
+  return Math.max(0.1, Math.min(fitScale, 5))
+}
+
+// 适应窗口大小
+const fitToWindow = () => {
+  // 尝试从实际渲染的SVG元素获取尺寸
+  const lightboxImage = document.querySelector('.lightbox-image svg')
+  if (lightboxImage) {
+    const svgRect = lightboxImage.getBoundingClientRect()
+    const lightboxBody = document.querySelector('.lightbox-body')
+
+    if (lightboxBody && svgRect.width > 0 && svgRect.height > 0) {
+      const bodyRect = lightboxBody.getBoundingClientRect()
+      const padding = 20
+
+      const availableWidth = bodyRect.width - padding
+      const availableHeight = bodyRect.height - padding
+
+      const scaleX = availableWidth / svgRect.width
+      const scaleY = availableHeight / svgRect.height
+
+      const fitScale = Math.min(scaleX, scaleY)
+      scale.value = Math.max(0.1, Math.min(fitScale, 5))
+      translateX.value = 0
+      translateY.value = 0
+      return
+    }
+  }
+
+  // 回退到原来的计算方法
+  const fitScale = calculateFitScale()
+  scale.value = fitScale
+  translateX.value = 0
+  translateY.value = 0
+}
+
 // 灯箱功能
 const openLightbox = () => {
   if (svgContent.value) {
     showLightbox.value = true
-    resetZoom()
+    // 打开时自动计算合适的大小
+    nextTick(() => {
+      setTimeout(() => {
+        fitToWindow()
+      }, 150) // 等待弹窗动画和DOM完全渲染
+    })
   }
 }
 
@@ -461,7 +553,7 @@ onUnmounted(() => {
   -ms-user-select: none;
 }
 
-.zoom-btn, .reset-btn {
+.zoom-btn, .reset-btn, .fit-btn {
   padding: 0.2rem 0.4rem;
   border: 1px solid #ddd;
   background: white;
@@ -471,10 +563,21 @@ onUnmounted(() => {
   height: 28px;
   display: flex;
   align-items: center;
+  white-space: nowrap;
 }
 
-.zoom-btn:hover, .reset-btn:hover {
+.zoom-btn:hover, .reset-btn:hover, .fit-btn:hover {
   background: #f5f5f5;
+}
+
+.fit-btn {
+  background: #e3f2fd;
+  border-color: #2196f3;
+  color: #1976d2;
+}
+
+.fit-btn:hover {
+  background: #bbdefb;
 }
 
 .zoom-level {
@@ -517,7 +620,7 @@ onUnmounted(() => {
     margin: 0;
   }
 
-  .zoom-btn, .reset-btn, .close-btn {
+  .zoom-btn, .reset-btn, .fit-btn, .close-btn {
     padding: 0.2rem 0.4rem;
     font-size: 0.8rem;
   }

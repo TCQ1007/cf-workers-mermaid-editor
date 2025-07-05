@@ -19,21 +19,11 @@ export default {
 			return Response.json({ name: "Cloudflare" }, { headers: corsHeaders });
 		}
 
-		// 静态资源
-		try {
-			const response = await env.ASSETS.fetch(request);
-			return new Response(response.body, {
-				status: response.status,
-				headers: {...response.headers, ...corsHeaders}
-			});
-		} catch {
-			// SPA应用：对于不存在的路由，返回index.html让前端路由处理
-			const indexRequest = new Request(new URL('/', request.url), request);
-			const indexResponse = await env.ASSETS.fetch(indexRequest);
-			return new Response(indexResponse.body, {
-				status: 200,
-				headers: { ...indexResponse.headers, ...corsHeaders }
-			});
-		}
+		// 静态资源 - 直接交给ASSETS处理，包括SPA fallback
+		const response = await env.ASSETS.fetch(request);
+		return new Response(response.body, {
+			status: response.status,
+			headers: {...response.headers, ...corsHeaders}
+		});
 	},
 };

@@ -8,6 +8,7 @@
       <div class="toolbar">
         <button @click="openPreviewWindow" class="btn btn-primary preview-window-btn">🪟 新窗口预览</button>
         <span v-if="isInJingdongMicroApp()" class="microapp-indicator">🔧 微前端模式</span>
+        <button @click="showAbout = true" class="about-btn" title="关于项目">❗</button>
         <GitHubCorner href="https://github.com/TCQ1007/cf-workers-mermaid-editor" />
       </div>
     </div>
@@ -508,6 +509,47 @@ body {
   white-space: nowrap;
 }
 
+.about-btn {
+  background: linear-gradient(135deg, #5a6c7d 0%, #4a5568 100%);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 1.3rem;
+  color: #f7fafc;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pulse 2s infinite;
+  margin-right: 8px;
+}
+
+.about-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  animation: none;
+  border-color: rgba(255, 255, 255, 0.4);
+  background: linear-gradient(135deg, #6b7c8d 0%, #5a6578 100%);
+}
+
+.about-btn:active {
+  transform: scale(0.95);
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+  50% {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3), 0 0 0 3px rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+}
+
 .toolbar {
   display: flex;
   align-items: center;
@@ -821,6 +863,25 @@ body {
     flex-direction: column;
     gap: 1rem;
     padding: 1rem;
+  }
+
+  .header-left {
+    justify-content: center;
+    text-align: center;
+  }
+
+  .about-btn {
+    position: static;
+    transform: none;
+    margin-left: 1rem;
+  }
+
+  .about-btn:hover {
+    transform: scale(1.1);
+  }
+
+  .about-btn:active {
+    transform: scale(0.95);
   }
 
   .toolbar {

@@ -7,31 +7,29 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref, onMounted, onUnmounted, watch, nextTick } from "vue";
 
-export default {
-  name: "MonacoEditor",
-  props: {
-    value: {
-      type: String,
-      default: "",
-    },
-    language: {
-      type: String,
-      default: "mermaid",
-    },
-    theme: {
-      type: String,
-      default: "vs",
-    },
-    options: {
-      type: Object,
-      default: () => ({}),
-    },
+const props = defineProps({
+  value: {
+    type: String,
+    default: "",
   },
-  emits: ["change", "selection-change"],
-  setup(props, { emit }) {
+  language: {
+    type: String,
+    default: "mermaid",
+  },
+  theme: {
+    type: String,
+    default: "vs",
+  },
+  options: {
+    type: Object,
+    default: () => ({}),
+  },
+});
+
+const emit = defineEmits(["change", "selection-change"]);
     const editorContainer = ref(null);
     const showPlaceholder = ref(true);
     let editor = null;
@@ -287,13 +285,7 @@ export default {
         }
       }
     });
-    return {
-      editorContainer,
-      showPlaceholder,
-      fontSize,
-    };
-  },
-};
+
 </script>
 
 <style scoped>

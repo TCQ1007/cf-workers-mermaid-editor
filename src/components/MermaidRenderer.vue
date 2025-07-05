@@ -55,19 +55,15 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref, onMounted, watch, nextTick, onUnmounted } from 'vue'
-import { isInJingdongMicroApp } from '../config/microapp.js'
 
-export default {
-  name: 'MermaidRenderer',
-  props: {
-    content: {
-      type: String,
-      required: true
-    }
-  },
-  setup(props) {
+const props = defineProps({
+  content: {
+    type: String,
+    required: true
+  }
+});
     const mermaidContainer = ref(null)
     const lightboxContent = ref(null)
     const lightboxImage = ref(null)
@@ -114,16 +110,14 @@ export default {
       }
 
       try {
-        // 在微前端环境中使用更安全的配置
-        const isMicroApp = isInJingdongMicroApp()
         const config = {
           startOnLoad: false,
           theme: 'default',
-          securityLevel: isMicroApp ? 'strict' : 'loose',
+          securityLevel: 'loose',
           fontFamily: 'Arial, sans-serif',
           flowchart: {
             useMaxWidth: true,
-            htmlLabels: !isMicroApp // 微前端环境禁用HTML标签
+            htmlLabels: true
           },
           sequence: {
             useMaxWidth: true
@@ -143,7 +137,7 @@ export default {
         }
 
         window.mermaid.initialize(config)
-        console.log(`Mermaid initialized successfully (microApp: ${isMicroApp})`)
+        console.log('Mermaid initialized successfully')
       } catch (err) {
         console.error('Failed to initialize Mermaid:', err)
         error.value = '无法初始化 Mermaid 渲染器'
@@ -346,30 +340,7 @@ export default {
       if (renderTimeout) clearTimeout(renderTimeout)
       if (rafId) cancelAnimationFrame(rafId)
     })
-    return {
-      mermaidContainer,
-      lightboxContent,
-      lightboxImage,
-      loading,
-      error,
-      showLightbox,
-      svgContent,
-      scale,
-      translateX,
-      translateY,
-      isDragging,
-      openLightbox,
-      closeLightbox,
-      zoomIn,
-      zoomOut,
-      resetZoom,
-      calculateFitZoom,
-      setZoom,
-      onWheel,
-      startDrag
-    }
-  }
-}
+
 </script>
 
 <style scoped>

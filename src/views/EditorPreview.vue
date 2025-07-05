@@ -6,17 +6,24 @@
         <span class="subtitle">专业的 Mermaid 语法编辑器</span>
       </div>
       <div class="toolbar">
-        <!-- 顶部工具栏现在为空，或者可以放其他全局功能 -->
+        <button @click="openPreviewWindow" class="btn btn-primary">🪟 新窗口预览</button>
       </div>
     </div>
     <div class="content" :class="{ 'split-view': showPreview }">
-      <div class="editor-section" :style="{ width: showPreview ? `${editorWidth}%` : '100%' }">
+      <div
+        class="editor-section"
+        :style="{ width: showPreview ? `${editorWidth}%` : '100%' }"
+      >
         <div class="section-header">
           <h3>Mermaid 语法编辑器</h3>
           <div class="editor-controls">
             <div class="editor-buttons">
-              <button @click="copyToClipboard" class="btn btn-small">📋 {{ copyStatus }}</button>
-              <button @click="clearEditor" class="btn btn-small" :disabled="!code.trim()">🗑️ 清空</button>
+              <button @click="copyToClipboard" class="btn btn-small">
+                📋 {{ copyStatus }}
+              </button>
+              <button @click="clearEditor" class="btn btn-small" :disabled="!code.trim()">
+                🗑️ 清空
+              </button>
             </div>
             <div class="editor-stats">
               <span>字符: {{ code.length }}</span>
@@ -40,7 +47,11 @@
         <span class="icon">👁️</span>
         <span class="expand-text">展开预览</span>
       </div>
-      <div v-if="showPreview" class="preview-section" :style="{ width: `${100 - editorWidth}%` }">
+      <div
+        v-if="showPreview"
+        class="preview-section"
+        :style="{ width: `${100 - editorWidth}%` }"
+      >
         <div class="section-header">
           <h3>图表预览</h3>
           <div class="preview-controls">
@@ -64,10 +75,12 @@
         <span v-if="lastSaved">最后保存: {{ lastSaved }}</span>
       </div>
       <div class="status-right">
+        <span @click="showAbout = true" title="About">Info</span>
         <span>Tab: 2 空格</span>
         <span>UTF-8</span>
       </div>
     </div>
+    <AboutModal v-if="showAbout" @close="showAbout = false" />
   </div>
 </template>
 
@@ -75,25 +88,10 @@
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import MonacoEditor from "../components/MonacoEditor.vue";
 import MermaidRenderer from "../components/MermaidRenderer.vue";
+import AboutModal from "../components/AboutModal.vue";
 
 const editorRef = ref(null);
-const code = ref(`graph TD
-    A[开始] --> B{选择类型}
-    B -->|流程图| C[绘制流程]
-    B -->|序列图| D[绘制序列]
-    B -->|甘特图| E[绘制甘特]
-    C --> F[完成]
-    D --> F
-    E --> F
-    F --> G[导出使用]
-    
-    classDef startEnd fill:#e1f5fe,stroke:#01579b,stroke-width:2px
-    classDef process fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
-    classDef decision fill:#fff3e0,stroke:#e65100,stroke-width:2px
-    
-    class A,G startEnd
-    class C,D,E process
-    class B decision`);
+const code = ref("");
 const selectedLanguage = ref("mermaid");
 const showPreview = ref(true);
 const copyStatus = ref("复制");
@@ -101,10 +99,23 @@ const selectedText = ref("");
 const lastSaved = ref("");
 const editorWidth = ref(40); // 默认40%宽度
 const isResizing = ref(false);
+const previewWindow = ref(null);
+const previewWindowCheckInterval = ref(null);
 const lineCount = computed(() => code.value.split("\n").length);
 const handleCodeChange = (newCode) => {
   code.value = newCode;
   saveToLocalStorage();
+
+  // 实时同步到预览窗口
+  if (previewWindow.value && !previewWindow.value.closed) {
+    previewWindow.value.postMessage(
+      {
+        type: "updateMermaid",
+        code: newCode,
+      },
+      "*"
+    );
+  }
 };
 const handleSelectionChange = (selection) => {
   selectedText.value = selection;
@@ -152,27 +163,35 @@ const copyChartAsImage = async () => {
     try {
       // 获取SVG的完整HTML
       const svgData = new XMLSerializer().serializeToString(svgElement);
-      
+
       // 创建一个包含SVG的完整HTML文档
       const svgWithStyles = `
         <svg xmlns="http://www.w3.org/2000/svg" 
-             width="${svgElement.getAttribute('width') || svgElement.viewBox?.baseVal?.width || 800}" 
-             height="${svgElement.getAttribute('height') || svgElement.viewBox?.baseVal?.height || 600}"
+             width="${
+               svgElement.getAttribute("width") ||
+               svgElement.viewBox?.baseVal?.width ||
+               800
+             }" 
+             height="${
+               svgElement.getAttribute("height") ||
+               svgElement.viewBox?.baseVal?.height ||
+               600
+             }"
              style="background: white; font-family: Arial, sans-serif;">
           ${svgElement.innerHTML}
         </svg>
       `;
-      
+
       // 创建blob
-      const blob = new Blob([svgWithStyles], { type: 'image/svg+xml' });
-      
+      const blob = new Blob([svgWithStyles], { type: "image/svg+xml" });
+
       // 尝试复制到剪贴板
       if (navigator.clipboard && window.ClipboardItem) {
         try {
           await navigator.clipboard.write([
             new ClipboardItem({
-              "image/svg+xml": blob
-            })
+              "image/svg+xml": blob,
+            }),
           ]);
           alert("图表已复制为SVG到剪贴板");
           return;
@@ -180,7 +199,7 @@ const copyChartAsImage = async () => {
           console.log("SVG复制失败，尝试PNG方式");
         }
       }
-      
+
       // 如果SVG复制失败，尝试PNG方式
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -189,10 +208,9 @@ const copyChartAsImage = async () => {
       a.click();
       URL.revokeObjectURL(url);
       alert("图表已下载为SVG文件");
-      
     } catch (err) {
       console.error("SVG处理失败:", err);
-      
+
       // 备用方案：直接复制SVG代码
       try {
         const svgCode = new XMLSerializer().serializeToString(svgElement);
@@ -202,7 +220,6 @@ const copyChartAsImage = async () => {
         alert("图表复制失败，请手动保存");
       }
     }
-    
   } catch (err) {
     console.error("复制图表失败:", err);
     alert("复制图表失败");
@@ -226,35 +243,35 @@ const startResize = (e) => {
   isResizing.value = true;
   const startX = e.clientX;
   const startWidth = editorWidth.value;
-  const containerWidth = document.querySelector('.content').offsetWidth;
-  
+  const containerWidth = document.querySelector(".content").offsetWidth;
+
   const onMouseMove = (e) => {
     if (!isResizing.value) return;
-    
+
     const deltaX = e.clientX - startX;
     const deltaPercent = (deltaX / containerWidth) * 100;
     let newWidth = startWidth + deltaPercent;
-    
+
     // 限制最小和最大宽度
     newWidth = Math.max(20, Math.min(80, newWidth));
     editorWidth.value = newWidth;
-    
+
     // 保存到localStorage
     localStorage.setItem("editorWidth", newWidth.toString());
   };
-  
+
   const onMouseUp = () => {
     isResizing.value = false;
-    document.removeEventListener('mousemove', onMouseMove);
-    document.removeEventListener('mouseup', onMouseUp);
-    document.body.style.cursor = 'default';
-    document.body.style.userSelect = 'auto';
+    document.removeEventListener("mousemove", onMouseMove);
+    document.removeEventListener("mouseup", onMouseUp);
+    document.body.style.cursor = "default";
+    document.body.style.userSelect = "auto";
   };
-  
-  document.addEventListener('mousemove', onMouseMove);
-  document.addEventListener('mouseup', onMouseUp);
-  document.body.style.cursor = 'col-resize';
-  document.body.style.userSelect = 'none';
+
+  document.addEventListener("mousemove", onMouseMove);
+  document.addEventListener("mouseup", onMouseUp);
+  document.body.style.cursor = "col-resize";
+  document.body.style.userSelect = "none";
 };
 
 const loadFromLocalStorage = () => {
@@ -262,7 +279,7 @@ const loadFromLocalStorage = () => {
     const saved = localStorage.getItem("mermaidEditorData");
     if (saved) {
       const data = JSON.parse(saved);
-      code.value = data.code || code.value;
+      code.value = data.code || "";
       lastSaved.value = data.timestamp
         ? new Date(data.timestamp).toLocaleTimeString()
         : "";
@@ -287,15 +304,92 @@ const startAutoSave = () => {
     }
   }, 30000);
 };
+
+// 新窗口预览功能
+const openPreviewWindow = () => {
+  // 如果已经有预览窗口，先关闭它
+  if (previewWindow.value && !previewWindow.value.closed) {
+    previewWindow.value.close();
+  }
+
+  // 构建预览URL，不传递代码参数
+  const baseUrl = window.location.origin;
+  const previewUrl = baseUrl + "/preview";
+
+  // 创建新窗口，使用预览路由
+  const windowFeatures =
+    "width=1200,height=800,scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no";
+  previewWindow.value = window.open(previewUrl, "MermaidPreview", windowFeatures);
+
+  if (!previewWindow.value) {
+    alert("无法打开新窗口，请检查浏览器弹窗设置");
+    return;
+  }
+
+  // 自动收起编辑页面的预览区域
+  showPreview.value = false;
+
+  // 监听窗口关闭
+  startPreviewWindowCheck();
+};
+
+const startPreviewWindowCheck = () => {
+  if (previewWindowCheckInterval.value) {
+    clearInterval(previewWindowCheckInterval.value);
+  }
+
+  previewWindowCheckInterval.value = setInterval(() => {
+    if (previewWindow.value && previewWindow.value.closed) {
+      clearInterval(previewWindowCheckInterval.value);
+      previewWindow.value = null;
+    }
+  }, 1000);
+};
+
+// 提供给预览窗口获取当前代码的方法
+window.getEditorCode = () => {
+  return code.value;
+};
 onMounted(() => {
   loadFromLocalStorage();
   startAutoSave();
+  // 监听来自预览窗口的消息
+  window.addEventListener("message", handlePreviewWindowMessage);
 });
+
 onUnmounted(() => {
   if (autoSaveTimer) {
     clearInterval(autoSaveTimer);
   }
+  if (previewWindowCheckInterval.value) {
+    clearInterval(previewWindowCheckInterval.value);
+  }
+  if (previewWindow.value && !previewWindow.value.closed) {
+    previewWindow.value.close();
+  }
+  window.removeEventListener("message", handlePreviewWindowMessage);
 });
+
+const handlePreviewWindowMessage = (event) => {
+  if (event.data && event.data.type === "previewWindowClosed") {
+    if (previewWindowCheckInterval.value) {
+      clearInterval(previewWindowCheckInterval.value);
+    }
+    previewWindow.value = null;
+  } else if (event.data && event.data.type === "previewWindowReady") {
+    // 预览窗口准备就绪，发送当前代码
+    if (previewWindow.value && !previewWindow.value.closed) {
+      previewWindow.value.postMessage(
+        {
+          type: "updateMermaid",
+          code: code.value,
+        },
+        "*"
+      );
+    }
+  }
+};
+const showAbout = ref(false);
 </script>
 
 <style>
@@ -315,7 +409,8 @@ onUnmounted(() => {
 }
 
 /* 重置 body 和 html 的默认样式 */
-html, body {
+html,
+body {
   margin: 0 !important;
   padding: 0 !important;
   height: 100% !important;
@@ -326,7 +421,6 @@ html, body {
 </style>
 
 <style scoped>
-
 /* 顶部工具栏 - 紧凑设计 */
 .header {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -472,7 +566,7 @@ html, body {
 }
 
 .resize-handle::before {
-  content: '';
+  content: "";
   position: absolute;
   left: -2px;
   right: -2px;
@@ -624,6 +718,33 @@ html, body {
   background: #495057;
   border-radius: 3px;
   font-size: 0.7rem;
+}
+
+.status-right {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+}
+.status-info {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  min-width: 48px;
+  padding: 0 12px;
+  font-size: inherit;
+  font-family: inherit;
+  color: inherit;
+  background: inherit;
+  border: none;
+  border-radius: 4px;
+  box-sizing: border-box;
+  user-select: none;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.status-info:hover {
+  background: #e9ecef;
+  color: #333;
 }
 
 /* 响应式设计 */

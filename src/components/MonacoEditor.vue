@@ -1,5 +1,10 @@
 <template>
-  <div ref="editorContainer" class="monaco-editor-container"></div>
+  <div class="monaco-editor-wrapper">
+    <div ref="editorContainer" class="monaco-editor-container"></div>
+    <div v-if="showPlaceholder" class="monaco-placeholder">
+      从这里输入 Mermaid 语法内容
+    </div>
+  </div>
 </template>
 
 <script>
@@ -28,6 +33,7 @@ export default {
   emits: ["change", "selection-change"],
   setup(props, { emit }) {
     const editorContainer = ref(null);
+    const showPlaceholder = ref(true);
     let editor = null;
     let isUpdating = false;
     const defaultOptions = {
@@ -101,6 +107,7 @@ export default {
           editor.onDidChangeModelContent(() => {
             if (!isUpdating) {
               const value = editor.getValue();
+              showPlaceholder.value = !value.trim();
               emit("change", value);
             }
           });
@@ -114,6 +121,9 @@ export default {
           });
 
           setupLanguageFeatures();
+
+          // 初始化占位符状态
+          showPlaceholder.value = !props.value.trim();
 
           const resizeObserver = new ResizeObserver(() => {
             if (editor) {
@@ -191,6 +201,7 @@ export default {
           editor.setValue(newValue);
           isUpdating = false;
         }
+        showPlaceholder.value = !newValue.trim();
       }
     );
     onMounted(() => {
@@ -206,12 +217,19 @@ export default {
     });
     return {
       editorContainer,
+      showPlaceholder,
     };
   },
 };
 </script>
 
 <style scoped>
+.monaco-editor-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
 .monaco-editor-container {
   width: 100%;
   height: 100%;
@@ -220,5 +238,18 @@ export default {
   border-radius: 6px;
   background: #fafbfc;
   box-sizing: border-box;
+}
+
+.monaco-placeholder {
+  position: absolute;
+  top: 20px;
+  left: 65px;
+  color: #999;
+  font-size: 14px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.6;
+  user-select: none;
 }
 </style>

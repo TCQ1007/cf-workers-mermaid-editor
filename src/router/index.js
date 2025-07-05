@@ -15,6 +15,11 @@ const routes = [
     path: '/preview',
     name: 'PreviewWindow',
     component: PreviewWindow
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    redirect: '/'
   }
 ]
 

@@ -22,16 +22,25 @@ export default {
 		// 静态资源
 		try {
 			const response = await env.ASSETS.fetch(request);
-			const newResponse = new Response(response.body, {
+			return new Response(response.body, {
 				status: response.status,
-				headers: { ...response.headers, ...corsHeaders }
+				headers: {...response.headers, ...corsHeaders}
 			});
-			return newResponse;
 		} catch {
-			return new Response('Not Found', {
-				status: 404,
-				headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
-			});
+			// SPA应用：对于不存在的路由，返回index.html让前端路由处理
+			try {
+				const indexRequest = new Request(new URL('/', request.url), request);
+				const indexResponse = await env.ASSETS.fetch(indexRequest);
+				return new Response(indexResponse.body, {
+					status: 200,
+					headers: { ...indexResponse.headers, ...corsHeaders }
+				});
+			} catch {
+				return new Response('Not Found', {
+					status: 404,
+					headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
+				});
+			}
 		}
 	},
 };

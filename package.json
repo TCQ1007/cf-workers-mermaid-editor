@@ -5,9 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:micro": "MICRO_APP_MODE=true vite",
     "build": "vite build",
+    "build:micro": "MICRO_APP_MODE=true vite build",
     "preview": "npm run build && wrangler dev",
-    "deploy": "npm run build && wrangler deploy"
+    "preview:micro": "npm run build:micro && wrangler dev",
+    "deploy": "npm run build && wrangler deploy",
+    "deploy:micro": "npm run build:micro && wrangler deploy"
   },
   "dependencies": {
     "monaco-editor": "^0.52.2",

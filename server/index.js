@@ -28,6 +28,7 @@ function addCorsHeaders(response) {
 export default {
 	async fetch(request, env) {
 		const url = new URL(request.url);
+		let pathname = url.pathname;
 
 		// 处理预检请求 (OPTIONS)
 		if (request.method === 'OPTIONS') {
@@ -37,11 +38,33 @@ export default {
 			}));
 		}
 
-		// API路由处理
-		if (url.pathname.startsWith("/api/")) {
+		// 检测并处理 /mermaid 子路径前缀
+		const isMicroAppRequest = pathname.startsWith('/mermaid');
+		if (isMicroAppRequest) {
+			// 移除 /mermaid 前缀，重写路径
+			pathname = pathname.replace(/^\/mermaid/, '') || '/';
+			console.log(`🔄 微前端路由重写: ${url.pathname} -> ${pathname}`);
+
+			// 创建新的URL用于静态资源请求
+			const rewrittenUrl = new URL(request.url);
+			rewrittenUrl.pathname = pathname;
+
+			// 创建新的请求对象
+			request = new Request(rewrittenUrl, {
+				method: request.method,
+				headers: request.headers,
+				body: request.body
+			});
+		}
+
+		// API路由处理 (支持带前缀和不带前缀)
+		if (pathname.startsWith("/api/")) {
 			const response = Response.json({
 				name: "Cloudflare",
-				message: "API endpoint with CORS support"
+				message: "API endpoint with CORS support",
+				microApp: isMicroAppRequest,
+				originalPath: url.pathname,
+				rewrittenPath: pathname
 			});
 			return addCorsHeaders(response);
 		}
@@ -56,7 +79,12 @@ export default {
 			return addCorsHeaders(response);
 		} catch (error) {
 			// 如果静态资源不存在，返回404并包含CORS头部
-			const response = new Response('Not Found', { status: 404 });
+			const response = new Response('Not Found', {
+				status: 404,
+				headers: {
+					'Content-Type': 'text/plain'
+				}
+			});
 			return addCorsHeaders(response);
 		}
 	},

@@ -43,11 +43,7 @@ export function getBasePath() {
     console.log('🏠 独立运行模式')
     return '/'
   }
-
-  const firstSegment = window.location.pathname.split('/')[1]
-  const prefix = firstSegment ? `/${firstSegment}` : '/mermaid'
-  console.log(`🔍 微前端环境，路由前缀: ${prefix}`)
-  return prefix
+  return `/${window.location.pathname.split('/')[1]}`
 }
 
 /**

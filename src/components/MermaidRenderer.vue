@@ -56,7 +56,6 @@
 
 <script>
 import { ref, onMounted, watch, nextTick, onUnmounted } from 'vue'
-import mermaid from 'mermaid'
 
 export default {
   name: 'MermaidRenderer',
@@ -86,7 +85,10 @@ export default {
     let isUpdating = false
     const initMermaid = () => {
       try {
-        mermaid.initialize({
+        if (!window.mermaid) {
+          throw new Error('Mermaid library not loaded')
+        }
+        window.mermaid.initialize({
           startOnLoad: false,
           theme: 'default',
           securityLevel: 'loose',
@@ -138,7 +140,7 @@ export default {
           }
           mermaidContainer.value.innerHTML = ''
           const id = `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-          const { svg } = await mermaid.render(id, props.content)
+          const { svg } = await window.mermaid.render(id, props.content)
           if (mermaidContainer.value) {
             mermaidContainer.value.innerHTML = svg
             svgContent.value = svg

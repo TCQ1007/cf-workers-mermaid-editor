@@ -23,12 +23,6 @@ const router = createRouter({
   routes
 })
 
-// 添加路由守卫，用于调试和监控
-router.beforeEach((to, from, next) => {
-  console.log(`🚀 路由跳转: ${from.path} -> ${to.path} (basePath: ${basePath})`)
-  next()
-})
-
 // 路由就绪后触发微前端生命周期
 router.isReady().then(() => {
   microAppLifecycle.mounted()

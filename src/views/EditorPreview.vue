@@ -8,7 +8,7 @@
       <div class="toolbar">
         <button @click="openPreviewWindow" class="btn btn-primary preview-window-btn">🪟 新窗口预览</button>
         <span v-if="isInJingdongMicroApp()" class="microapp-indicator">🔧 微前端模式</span>
-        <button @click="showAbout = true" class="about-btn" title="关于项目">❗</button>
+        <button @click="showAbout = true" class="about-btn" title="关于项目">?</button>
         <GitHubCorner href="https://github.com/TCQ1007/cf-workers-mermaid-editor" />
       </div>
     </div>

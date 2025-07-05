@@ -39,12 +39,13 @@ export function isInJingdongMicroApp() {
  * @returns {string}
  */
 export function getBasePath() {
+  // 无论在什么环境下都使用根路径，简化配置
   if (isInJingdongMicroApp()) {
-    console.log('🔍 检测到微前端环境，使用 /mermaid 路由前缀')
-    return '/mermaid'
+    console.log('🔍 检测到微前端环境')
+  } else {
+    console.log('🏠 独立运行模式')
   }
-  
-  console.log('🏠 独立运行模式，不使用路由前缀')
+
   return '/'
 }
 

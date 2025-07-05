@@ -36,9 +36,14 @@ export default {
     const showPlaceholder = ref(true);
     let editor = null;
     let isUpdating = false;
+
+    // 字体大小管理
+    const fontSize = ref(14); // 默认字体大小
+    const minFontSize = 8;
+    const maxFontSize = 32;
     const defaultOptions = {
       automaticLayout: true,
-      fontSize: 14,
+      fontSize: fontSize.value,
       lineNumbers: "on",
       roundedSelection: false,
       scrollBeyondLastLine: false,
@@ -78,8 +83,61 @@ export default {
         horizontalScrollbarSize: 10,
       },
     };
+
+    // 加载保存的字体大小
+    const loadFontSize = () => {
+      try {
+        const savedFontSize = localStorage.getItem('monaco-editor-font-size');
+        if (savedFontSize) {
+          const size = parseInt(savedFontSize, 10);
+          if (size >= minFontSize && size <= maxFontSize) {
+            fontSize.value = size;
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load font size from localStorage:', err);
+      }
+    };
+
+    // 保存字体大小
+    const saveFontSize = () => {
+      try {
+        localStorage.setItem('monaco-editor-font-size', fontSize.value.toString());
+      } catch (err) {
+        console.warn('Failed to save font size to localStorage:', err);
+      }
+    };
+
+    // 调整字体大小
+    const adjustFontSize = (delta) => {
+      const newSize = fontSize.value + delta;
+      if (newSize >= minFontSize && newSize <= maxFontSize) {
+        fontSize.value = newSize;
+        if (editor) {
+          editor.updateOptions({ fontSize: fontSize.value });
+        }
+        saveFontSize();
+      }
+    };
+
+    // 鼠标滚轮事件处理
+    const handleWheel = (event) => {
+      // 只有在按住Ctrl键时才处理
+      if (event.ctrlKey) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        // 根据滚轮方向调整字体大小
+        const delta = event.deltaY > 0 ? -1 : 1;
+        adjustFontSize(delta);
+      }
+    };
+
     const initEditor = async () => {
       if (!editorContainer.value) return;
+
+      // 加载保存的字体大小
+      loadFontSize();
 
       // 等待 Monaco Editor CDN 加载完成
       if (!window.require) {
@@ -100,6 +158,7 @@ export default {
             ...props.options,
             value: props.value,
             language: props.language,
+            fontSize: fontSize.value, // 使用当前字体大小
           };
 
           editor = window.monaco.editor.create(editorContainer.value, editorOptions);
@@ -132,6 +191,13 @@ export default {
           });
           resizeObserver.observe(editorContainer.value);
           editor._resizeObserver = resizeObserver;
+
+          // 添加鼠标滚轮事件监听器
+          const editorDomNode = editor.getDomNode();
+          if (editorDomNode) {
+            editorDomNode.addEventListener('wheel', handleWheel, { passive: false });
+            editor._wheelEventListener = handleWheel;
+          }
 
           resolve();
         });
@@ -209,6 +275,12 @@ export default {
     });
     onUnmounted(() => {
       if (editor) {
+        // 移除滚轮事件监听器
+        const editorDomNode = editor.getDomNode();
+        if (editorDomNode && editor._wheelEventListener) {
+          editorDomNode.removeEventListener('wheel', editor._wheelEventListener);
+        }
+
         editor.dispose();
         if (editor._resizeObserver) {
           editor._resizeObserver.disconnect();
@@ -218,6 +290,7 @@ export default {
     return {
       editorContainer,
       showPlaceholder,
+      fontSize,
     };
   },
 };
@@ -253,3 +326,4 @@ export default {
   user-select: none;
 }
 </style>
+ 

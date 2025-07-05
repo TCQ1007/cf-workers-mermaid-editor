@@ -24,6 +24,7 @@
             <span class="zoom-level">{{ Math.round(scale * 100) }}%</span>
             <button @click="zoomIn" class="control-btn" :disabled="scale >= 10">🔍+</button>
             <div class="zoom-presets">
+              <button @click="calculateFitZoom" class="preset-btn fit-btn">适应窗口</button>
               <button @click="setZoom(1)" class="preset-btn" :class="{ active: Math.abs(scale - 1) < 0.1 }">100%</button>
               <button @click="setZoom(2)" class="preset-btn" :class="{ active: Math.abs(scale - 2) < 0.1 }">200%</button>
               <button @click="setZoom(5)" class="preset-btn" :class="{ active: Math.abs(scale - 5) < 0.1 }">500%</button>
@@ -175,8 +176,11 @@ export default {
     const openLightbox = () => {
       if (svgContent.value) {
         showLightbox.value = true
-        resetZoom()
         document.body.style.overflow = 'hidden'
+        // 等待DOM更新后计算适合的缩放比例
+        nextTick(() => {
+          calculateFitZoom()
+        })
       }
     }
     const closeLightbox = (e) => {
@@ -203,6 +207,51 @@ export default {
     }
     const resetZoom = () => {
       scale.value = 1
+      translateX.value = 0
+      translateY.value = 0
+    }
+
+    const calculateFitZoom = () => {
+      if (!lightboxContent.value || !svgContent.value) {
+        resetZoom()
+        return
+      }
+
+      // 创建临时元素来测量SVG的原始尺寸
+      const tempDiv = document.createElement('div')
+      tempDiv.innerHTML = svgContent.value
+      tempDiv.style.position = 'absolute'
+      tempDiv.style.visibility = 'hidden'
+      tempDiv.style.pointerEvents = 'none'
+      document.body.appendChild(tempDiv)
+
+      const tempSvg = tempDiv.querySelector('svg')
+      if (!tempSvg) {
+        document.body.removeChild(tempDiv)
+        resetZoom()
+        return
+      }
+
+      // 获取SVG的原始尺寸
+      const svgRect = tempSvg.getBoundingClientRect()
+      const svgWidth = svgRect.width
+      const svgHeight = svgRect.height
+
+      // 清理临时元素
+      document.body.removeChild(tempDiv)
+
+      // 获取可用的显示区域尺寸（减去一些边距）
+      const containerRect = lightboxContent.value.getBoundingClientRect()
+      const availableWidth = containerRect.width - 40 // 预留40px边距
+      const availableHeight = containerRect.height - 40 // 预留40px边距
+
+      // 计算缩放比例，使图表适应窗口
+      const scaleX = availableWidth / svgWidth
+      const scaleY = availableHeight / svgHeight
+      const fitScale = Math.min(scaleX, scaleY, 10) // 最大不超过10倍
+
+      // 设置合适的缩放比例，最小0.2倍
+      scale.value = Math.max(0.2, fitScale)
       translateX.value = 0
       translateY.value = 0
     }
@@ -279,6 +328,7 @@ export default {
       zoomIn,
       zoomOut,
       resetZoom,
+      calculateFitZoom,
       setZoom,
       onWheel,
       startDrag
@@ -404,6 +454,16 @@ export default {
 .preset-btn.active {
   background: #1976d2;
   color: #fff;
+}
+
+.preset-btn.fit-btn {
+  background: #4caf50;
+  color: #fff;
+  font-weight: bold;
+}
+
+.preset-btn.fit-btn:hover {
+  background: #45a049;
 }
 .lightbox-content {
   flex: 1;

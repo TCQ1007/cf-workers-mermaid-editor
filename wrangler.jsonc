@@ -8,6 +8,8 @@
 	"compatibility_date": "2025-07-05",
 	"main": "server/index.js",
 	"assets": {
+		"directory": "./dist",
+		"binding": "ASSETS",
 		"not_found_handling": "single-page-application"
 	},
 	"observability": {

@@ -1,54 +1,52 @@
 <template>
   <div class="mermaid-renderer">
-    <div v-if="error" class="error-message">
-      <h4>⚠️ Mermaid 语法错误</h4>
-      <p>{{ error }}</p>
-      <details>
-        <summary>点击查看原始代码</summary>
-        <pre>{{ content }}</pre>
-      </details>
+    <!-- 加载状态 -->
+    <div v-if="loading" class="status loading">
+      <div class="spinner"></div>
+      <span>正在渲染图表...</span>
     </div>
-    <div v-else class="preview-wrapper">
-      <div v-if="loading" class="loading-overlay">
-        <div class="loading-spinner"></div>
-        正在渲染图表...
+    
+    <!-- 错误状态 -->
+    <div v-else-if="error" class="status error">
+      <div class="error-icon">⚠️</div>
+      <div class="error-message">{{ error }}</div>
+    </div>
+    
+    <!-- 图表内容 -->
+    <div v-else class="mermaid-container">
+      <div ref="mermaidContainer" class="mermaid-content" @click="openLightbox"></div>
+      
+      <!-- 操作按钮 -->
+      <div class="mermaid-actions">
+        <button @click="copyToClipboard" class="action-btn" title="复制图表">📋 复制</button>
+        <button @click="downloadSVG" class="action-btn" title="下载SVG">💾 下载</button>
+        <button @click="openLightbox" class="action-btn" title="全屏预览">🔍 预览</button>
       </div>
-      <div class="mermaid-container" ref="mermaidContainer" @click="openLightbox"></div>
     </div>
-    <div v-if="showLightbox" class="lightbox-overlay" @click="closeLightbox">
-      <div class="lightbox-container">
+
+    <!-- 灯箱预览 -->
+    <div v-if="showLightbox" class="lightbox" @click="closeLightbox">
+      <div class="lightbox-content" @click.stop>
         <div class="lightbox-header">
-          <div class="lightbox-title"> 图表预览</div>
-          <div class="lightbox-controls">
-            <button @click="zoomOut" class="control-btn" :disabled="scale <= 0.2">🔍-</button>
-            <span class="zoom-level">{{ Math.round(scale * 100) }}%</span>
-            <button @click="zoomIn" class="control-btn" :disabled="scale >= 10">🔍+</button>
-            <div class="zoom-presets">
-              <button @click="calculateFitZoom" class="preset-btn fit-btn">适应窗口</button>
-              <button @click="setZoom(1)" class="preset-btn" :class="{ active: Math.abs(scale - 1) < 0.1 }">100%</button>
-              <button @click="setZoom(2)" class="preset-btn" :class="{ active: Math.abs(scale - 2) < 0.1 }">200%</button>
-              <button @click="setZoom(5)" class="preset-btn" :class="{ active: Math.abs(scale - 5) < 0.1 }">500%</button>
-              <button @click="setZoom(10)" class="preset-btn" :class="{ active: Math.abs(scale - 10) < 0.1 }">1000%</button>
-            </div>
-            <button @click="resetZoom" class="control-btn">🔄</button>
-            <button @click="closeLightbox" class="control-btn close-btn">✕</button>
-          </div>
+          <h3>图表预览</h3>
+          <button @click="closeLightbox" class="close-btn">✕</button>
         </div>
-        <div class="lightbox-content" ref="lightboxContent">
+        
+        <div class="lightbox-body">
           <div 
-            class="lightbox-image" 
-            :class="{ 'no-transition': isDragging }"
-            ref="lightboxImage"
-            :style="{ 
-              transform: `scale(${scale}) translate(${translateX}px, ${translateY}px)`,
-              cursor: isDragging ? 'grabbing' : (scale > 1 ? 'grab' : 'default')
-            }"
+            class="lightbox-image"
+            :style="imageStyle"
+            @wheel="handleWheel"
             @mousedown="startDrag"
-            @touchstart="startDrag"
-            @wheel="onWheel"
-          >
-            <div v-html="svgContent"></div>
-          </div>
+            v-html="svgContent"
+          ></div>
+        </div>
+        
+        <div class="lightbox-controls">
+          <button @click="zoomOut" class="zoom-btn">🔍-</button>
+          <span class="zoom-level">{{ Math.round(scale * 100) }}%</span>
+          <button @click="zoomIn" class="zoom-btn">🔍+</button>
+          <button @click="resetZoom" class="reset-btn">重置</button>
         </div>
       </div>
     </div>
@@ -56,411 +54,342 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch, nextTick, onUnmounted } from 'vue'
+import { ref, computed, onMounted, watch, nextTick, onUnmounted } from 'vue'
 
 const props = defineProps({
   content: {
     type: String,
     required: true
   }
-});
-    const mermaidContainer = ref(null)
-    const lightboxContent = ref(null)
-    const lightboxImage = ref(null)
-    const loading = ref(false)
-    const error = ref('')
-    const showLightbox = ref(false)
-    const svgContent = ref('')
-    const scale = ref(1)
-    const translateX = ref(0)
-    const translateY = ref(0)
-    const isDragging = ref(false)
-    const dragStart = ref({ x: 0, y: 0 })
-    const dragStartTranslate = ref({ x: 0, y: 0 })
-    let renderTimeout = null
-    let rafId = null
-    let currentMousePos = { x: 0, y: 0 }
-    let isUpdating = false
+})
 
+// 响应式状态
+const mermaidContainer = ref(null)
+const loading = ref(false)
+const error = ref('')
+const svgContent = ref('')
 
-    const initMermaid = () => {
-      if (!window.mermaid) {
-        console.error("Mermaid library not found");
-        error.value = 'Mermaid 库未加载'
-        return;
-      }
+// 灯箱状态
+const showLightbox = ref(false)
+const scale = ref(1)
+const translateX = ref(0)
+const translateY = ref(0)
+const isDragging = ref(false)
 
-      try {
-        const config = {
-          startOnLoad: false,
-          theme: 'default',
-          securityLevel: 'loose',
-          fontFamily: 'Arial, sans-serif',
-          flowchart: {
-            useMaxWidth: true,
-            htmlLabels: true
-          },
-          sequence: {
-            useMaxWidth: true
-          },
-          gantt: {
-            useMaxWidth: true
-          },
-          class: {
-            useMaxWidth: true
-          },
-          state: {
-            useMaxWidth: true
-          },
-          pie: {
-            useMaxWidth: true
-          }
-        }
+// 计算属性
+const imageStyle = computed(() => ({
+  transform: `scale(${scale.value}) translate(${translateX.value}px, ${translateY.value}px)`,
+  cursor: isDragging.value ? 'grabbing' : (scale.value > 1 ? 'grab' : 'default')
+}))
 
-        window.mermaid.initialize(config)
-        console.log('Mermaid initialized successfully')
-      } catch (err) {
-        console.error('Failed to initialize Mermaid:', err)
-        error.value = '无法初始化 Mermaid 渲染器'
-      }
-    }
-    const renderMermaid = async () => {
-      if (renderTimeout) {
-        clearTimeout(renderTimeout)
-      }
-      if (!props.content.trim()) {
-        if (mermaidContainer.value) {
-          mermaidContainer.value.innerHTML = '<div class="empty-message">请输入 Mermaid 语法</div>'
-        }
-        return
-      }
-      loading.value = true
-      error.value = ''
-      renderTimeout = setTimeout(async () => {
-        try {
-          await nextTick()
-          if (!mermaidContainer.value) {
-            loading.value = false
-            return
-          }
-          mermaidContainer.value.innerHTML = ''
-          const id = `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-          const { svg } = await window.mermaid.render(id, props.content)
-          if (mermaidContainer.value) {
-            mermaidContainer.value.innerHTML = svg
-            svgContent.value = svg
-            const svgElement = mermaidContainer.value.querySelector('svg')
-            if (svgElement) {
-              // 移除 maxWidth 限制，让 SVG 保持原始尺寸，通过容器滚动查看
-              svgElement.style.height = 'auto'
-              svgElement.style.display = 'block'
-              svgElement.style.cursor = 'pointer'
-              // 如果图表很小，则居中显示
-              const containerWidth = mermaidContainer.value.clientWidth
-              const svgWidth = svgElement.getBoundingClientRect().width
-              if (svgWidth < containerWidth) {
-                svgElement.style.margin = '0 auto'
-              } else {
-                svgElement.style.margin = '0'
-              }
-            }
-          }
-        } catch (err) {
-          console.error('Mermaid rendering error:', err)
-          if (err.message && err.message.includes('mermaid')) {
-            error.value = 'Mermaid 模块加载失败，请刷新页面重试'
-          } else {
-            error.value = err.message || '图表语法错误，请检查语法'
-          }
-        } finally {
-          loading.value = false
-        }
-      }, 300)
-    }
-    const openLightbox = () => {
-      if (svgContent.value) {
-        showLightbox.value = true
-        document.body.style.overflow = 'hidden'
-        // 等待DOM更新后计算适合的缩放比例
-        nextTick(() => {
-          calculateFitZoom()
-        })
-      }
-    }
-    const closeLightbox = (e) => {
-      if (e.target === e.currentTarget) {
-        showLightbox.value = false
-        document.body.style.overflow = 'auto'
-      }
-    }
-    const zoomIn = () => {
-      if (scale.value < 10) {
-        let step = 0.2
-        if (scale.value >= 2) step = 0.5
-        if (scale.value >= 5) step = 1
-        scale.value = Math.min(10, scale.value + step)
-      }
-    }
-    const zoomOut = () => {
-      if (scale.value > 0.2) {
-        let step = 0.2
-        if (scale.value > 2) step = 0.5
-        if (scale.value > 5) step = 1
-        scale.value = Math.max(0.2, scale.value - step)
-      }
-    }
-    const resetZoom = () => {
-      scale.value = 1
-      translateX.value = 0
-      translateY.value = 0
-    }
+// Mermaid初始化
+const initMermaid = () => {
+  if (!window.mermaid) {
+    error.value = 'Mermaid 库未加载'
+    return
+  }
 
-    const calculateFitZoom = () => {
-      if (!lightboxContent.value || !svgContent.value) {
-        resetZoom()
-        return
-      }
-
-      // 创建临时元素来测量SVG的原始尺寸
-      const tempDiv = document.createElement('div')
-      tempDiv.innerHTML = svgContent.value
-      tempDiv.style.position = 'absolute'
-      tempDiv.style.visibility = 'hidden'
-      tempDiv.style.pointerEvents = 'none'
-      document.body.appendChild(tempDiv)
-
-      const tempSvg = tempDiv.querySelector('svg')
-      if (!tempSvg) {
-        document.body.removeChild(tempDiv)
-        resetZoom()
-        return
-      }
-
-      // 获取SVG的原始尺寸
-      const svgRect = tempSvg.getBoundingClientRect()
-      const svgWidth = svgRect.width
-      const svgHeight = svgRect.height
-
-      // 清理临时元素
-      document.body.removeChild(tempDiv)
-
-      // 获取可用的显示区域尺寸（减去一些边距）
-      const containerRect = lightboxContent.value.getBoundingClientRect()
-      const availableWidth = containerRect.width - 40 // 预留40px边距
-      const availableHeight = containerRect.height - 40 // 预留40px边距
-
-      // 计算缩放比例，使图表适应窗口
-      const scaleX = availableWidth / svgWidth
-      const scaleY = availableHeight / svgHeight
-      const fitScale = Math.min(scaleX, scaleY, 10) // 最大不超过10倍
-
-      // 设置合适的缩放比例，最小0.2倍
-      scale.value = Math.max(0.2, fitScale)
-      translateX.value = 0
-      translateY.value = 0
-    }
-    const setZoom = (targetScale) => {
-      scale.value = targetScale
-      translateX.value = 0
-      translateY.value = 0
-    }
-    const onWheel = (e) => {
-      e.preventDefault()
-      let delta = e.deltaY > 0 ? -0.1 : 0.1
-      let newScale = scale.value + delta
-      newScale = Math.max(0.2, Math.min(10, newScale))
-      scale.value = newScale
-    }
-    const startDrag = (e) => {
-      isDragging.value = true
-      if (e.type === 'mousedown') {
-        dragStart.value = { x: e.clientX, y: e.clientY }
-      } else if (e.type === 'touchstart') {
-        dragStart.value = { x: e.touches[0].clientX, y: e.touches[0].clientY }
-      }
-      dragStartTranslate.value = { x: translateX.value, y: translateY.value }
-      document.addEventListener('mousemove', onDrag)
-      document.addEventListener('mouseup', stopDrag)
-      document.addEventListener('touchmove', onDrag)
-      document.addEventListener('touchend', stopDrag)
-    }
-    const onDrag = (e) => {
-      if (!isDragging.value) return
-      let clientX, clientY
-      if (e.type.startsWith('touch')) {
-        clientX = e.touches[0].clientX
-        clientY = e.touches[0].clientY
-      } else {
-        clientX = e.clientX
-        clientY = e.clientY
-      }
-      translateX.value = dragStartTranslate.value.x + (clientX - dragStart.value.x)
-      translateY.value = dragStartTranslate.value.y + (clientY - dragStart.value.y)
-    }
-    const stopDrag = () => {
-      isDragging.value = false
-      document.removeEventListener('mousemove', onDrag)
-      document.removeEventListener('mouseup', stopDrag)
-      document.removeEventListener('touchmove', onDrag)
-      document.removeEventListener('touchend', stopDrag)
-    }
-    watch(() => props.content, () => {
-      renderMermaid()
+  try {
+    window.mermaid.initialize({
+      startOnLoad: false,
+      theme: 'default',
+      securityLevel: 'loose',
+      fontFamily: 'Arial, sans-serif',
+      flowchart: { useMaxWidth: true, htmlLabels: true },
+      sequence: { useMaxWidth: true },
+      gantt: { useMaxWidth: true },
+      class: { useMaxWidth: true },
+      state: { useMaxWidth: true },
+      pie: { useMaxWidth: true }
     })
-    onMounted(() => {
-      initMermaid()
-      renderMermaid()
-    })
-    onUnmounted(() => {
-      if (renderTimeout) clearTimeout(renderTimeout)
-      if (rafId) cancelAnimationFrame(rafId)
-    })
+    console.log('Mermaid initialized successfully')
+  } catch (err) {
+    console.error('Failed to initialize Mermaid:', err)
+    error.value = '无法初始化 Mermaid 渲染器'
+  }
+}
 
+// 渲染图表
+const renderMermaid = async () => {
+  if (!props.content.trim() || !mermaidContainer.value) return
+
+  loading.value = true
+  error.value = ''
+
+  try {
+    await nextTick()
+    
+    if (!window.mermaid) {
+      throw new Error('Mermaid not available')
+    }
+
+    mermaidContainer.value.innerHTML = ''
+    const id = `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    const { svg } = await window.mermaid.render(id, props.content)
+    
+    mermaidContainer.value.innerHTML = svg
+    svgContent.value = svg
+  } catch (err) {
+    console.error('Mermaid rendering error:', err)
+    error.value = err.message || '图表语法错误，请检查语法'
+  } finally {
+    loading.value = false
+  }
+}
+
+// 灯箱功能
+const openLightbox = () => {
+  if (svgContent.value) {
+    showLightbox.value = true
+    resetZoom()
+  }
+}
+
+const closeLightbox = () => {
+  showLightbox.value = false
+}
+
+// 缩放功能
+const zoomIn = () => {
+  scale.value = Math.min(scale.value * 1.2, 5)
+}
+
+const zoomOut = () => {
+  scale.value = Math.max(scale.value / 1.2, 0.2)
+}
+
+const resetZoom = () => {
+  scale.value = 1
+  translateX.value = 0
+  translateY.value = 0
+}
+
+// 鼠标滚轮缩放
+const handleWheel = (event) => {
+  event.preventDefault()
+  const delta = event.deltaY > 0 ? 0.9 : 1.1
+  scale.value = Math.max(0.2, Math.min(5, scale.value * delta))
+}
+
+// 拖拽功能
+const startDrag = (event) => {
+  if (scale.value <= 1) return
+  
+  isDragging.value = true
+  const startX = event.clientX - translateX.value
+  const startY = event.clientY - translateY.value
+
+  const onMouseMove = (e) => {
+    translateX.value = e.clientX - startX
+    translateY.value = e.clientY - startY
+  }
+
+  const onMouseUp = () => {
+    isDragging.value = false
+    document.removeEventListener('mousemove', onMouseMove)
+    document.removeEventListener('mouseup', onMouseUp)
+  }
+
+  document.addEventListener('mousemove', onMouseMove)
+  document.addEventListener('mouseup', onMouseUp)
+}
+
+// 复制功能
+const copyToClipboard = async () => {
+  try {
+    await navigator.clipboard.writeText(svgContent.value)
+    console.log('图表已复制到剪贴板')
+  } catch (err) {
+    console.error('复制失败:', err)
+  }
+}
+
+// 下载功能
+const downloadSVG = () => {
+  const blob = new Blob([svgContent.value], { type: 'image/svg+xml' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `mermaid-${Date.now()}.svg`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+// 监听内容变化
+watch(() => props.content, renderMermaid, { immediate: false })
+
+// 组件挂载
+onMounted(() => {
+  initMermaid()
+  renderMermaid()
+})
+
+// 组件卸载
+onUnmounted(() => {
+  if (showLightbox.value) {
+    closeLightbox()
+  }
+})
 </script>
 
 <style scoped>
 .mermaid-renderer {
+  position: relative;
   width: 100%;
   height: 100%;
-  position: relative;
 }
-.error-message {
-  color: #d32f2f;
-  background: #fff3f3;
-  border: 1px solid #fbc2c2;
-  border-radius: 6px;
-  padding: 16px;
-  margin: 16px 0;
-}
-.preview-wrapper {
-  width: 100%;
-  height: 100%;
-  min-height: 400px;
-  position: relative;
-}
-.loading-overlay {
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(255,255,255,0.7);
+
+/* 状态样式 */
+.status {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  z-index: 2;
+  padding: 2rem;
+  text-align: center;
 }
-.loading-spinner {
-  width: 32px;
-  height: 32px;
-  border: 4px solid #e0e0e0;
-  border-top: 4px solid #1976d2;
+
+.loading {
+  color: #666;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #007bff;
   border-radius: 50%;
   animation: spin 1s linear infinite;
-  margin-bottom: 8px;
+  margin-right: 0.5rem;
 }
+
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
-.mermaid-container {
-  width: 100%;
-  min-height: 400px;
-  background: #fff;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  box-sizing: border-box;
-  padding: 16px;
-  cursor: pointer;
-  overflow-x: auto;
+
+.error {
+  color: #dc3545;
+  flex-direction: column;
 }
-.lightbox-overlay {
+
+.error-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+/* 图表容器 */
+.mermaid-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.mermaid-content {
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  overflow: auto;
+}
+
+/* 操作按钮 */
+.mermaid-actions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.action-btn {
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+}
+
+.action-btn:hover {
+  background: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* 灯箱样式 */
+.lightbox {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.7);
-  z-index: 1000;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 1000;
 }
-.lightbox-container {
-  background: #fff;
+
+.lightbox-content {
+  background: white;
   border-radius: 8px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.2);
-  width: 95vw;
-  height: 95vh;
-  max-width: 95vw;
-  max-height: 95vh;
+  max-width: 90vw;
+  max-height: 90vh;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
+
 .lightbox-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  background: #f5f5f5;
-  border-bottom: 1px solid #e0e0e0;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid #eee;
 }
-.lightbox-title {
-  font-weight: bold;
-  font-size: 18px;
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #666;
 }
+
+.lightbox-body {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  min-height: 400px;
+}
+
+.lightbox-image {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
 .lightbox-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
-}
-.control-btn {
-  background: #f0f0f0;
-  border: none;
-  border-radius: 4px;
-  padding: 4px 8px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: background 0.2s;
-}
-.control-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.preset-btn {
-  background: #e3f2fd;
-  border: none;
-  border-radius: 4px;
-  padding: 2px 6px;
-  margin: 0 2px;
-  cursor: pointer;
-  font-size: 14px;
-}
-.preset-btn.active {
-  background: #1976d2;
-  color: #fff;
-}
-
-.preset-btn.fit-btn {
-  background: #4caf50;
-  color: #fff;
-  font-weight: bold;
-}
-
-.preset-btn.fit-btn:hover {
-  background: #45a049;
-}
-.lightbox-content {
-  flex: 1;
-  overflow: auto;
-  display: flex;
-  align-items: center;
   justify-content: center;
-  background: #fafbfc;
+  gap: 1rem;
+  padding: 1rem;
+  border-top: 1px solid #eee;
 }
-.lightbox-image {
-  display: inline-block;
-  transition: transform 0.2s cubic-bezier(0.4,0,0.2,1);
-  will-change: transform;
-  user-select: none;
+
+.zoom-btn, .reset-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
 }
-.lightbox-image.no-transition {
-  transition: none;
+
+.zoom-level {
+  font-weight: bold;
+  min-width: 60px;
+  text-align: center;
 }
-</style> 
+</style>

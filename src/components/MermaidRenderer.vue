@@ -109,26 +109,61 @@ const initMermaid = () => {
   }
 }
 
+// 判断内容是否为有效的Mermaid语法
+const isValidMermaidContent = (content) => {
+  if (!content || !content.trim()) return false
+
+  const trimmed = content.trim()
+  const validTypes = [
+    'graph', 'flowchart', 'sequenceDiagram', 'classDiagram',
+    'stateDiagram', 'erDiagram', 'journey', 'gantt',
+    'pie', 'gitgraph', 'mindmap', 'timeline'
+  ]
+
+  return validTypes.some(type => trimmed.startsWith(type))
+}
+
 // 渲染图表
 const renderMermaid = async () => {
-  if (!props.content.trim() || !mermaidContainer.value) return
+  // 清空之前的状态
+  loading.value = false
+  error.value = ''
+
+  // 判断内容有效性
+  if (!isValidMermaidContent(props.content)) {
+    if (mermaidContainer.value) {
+      mermaidContainer.value.innerHTML = ''
+    }
+    svgContent.value = ''
+    return
+  }
 
   loading.value = true
-  error.value = ''
 
   try {
     await nextTick()
-    
-    if (!window.mermaid) {
-      throw new Error('Mermaid not available')
+
+    // 确保DOM元素存在
+    if (!mermaidContainer.value) {
+      throw new Error('Mermaid container not found')
     }
 
+    if (!window.mermaid) {
+      throw new Error('Mermaid library not loaded')
+    }
+
+    // 清空容器
     mermaidContainer.value.innerHTML = ''
+
+    // 生成唯一ID并渲染
     const id = `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     const { svg } = await window.mermaid.render(id, props.content)
-    
-    mermaidContainer.value.innerHTML = svg
-    svgContent.value = svg
+
+    // 再次检查容器是否存在（防止组件在渲染过程中被卸载）
+    if (mermaidContainer.value) {
+      mermaidContainer.value.innerHTML = svg
+      svgContent.value = svg
+    }
   } catch (err) {
     console.error('Mermaid rendering error:', err)
     error.value = err.message || '图表语法错误，请检查语法'
@@ -215,8 +250,17 @@ const downloadSVG = () => {
   URL.revokeObjectURL(url)
 }
 
+// 防抖渲染
+let renderTimeout = null
+const debouncedRender = () => {
+  if (renderTimeout) {
+    clearTimeout(renderTimeout)
+  }
+  renderTimeout = setTimeout(renderMermaid, 300)
+}
+
 // 监听内容变化
-watch(() => props.content, renderMermaid, { immediate: false })
+watch(() => props.content, debouncedRender, { immediate: false })
 
 // 组件挂载
 onMounted(() => {

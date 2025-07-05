@@ -4,45 +4,6 @@
 
 <script>
 import { ref, onMounted, onUnmounted, watch, nextTick } from "vue";
-import * as monaco from "monaco-editor";
-
-self.MonacoEnvironment = {
-  getWorkerUrl: function (moduleId, label) {
-    if (label === "json") {
-      return `data:text/javascript;charset=utf-8,${encodeURIComponent(`
-        self.onmessage = function(e) {
-          self.postMessage({ id: e.data.id, result: null });
-        };
-      `)}`;
-    }
-    if (label === "css" || label === "scss" || label === "less") {
-      return `data:text/javascript;charset=utf-8,${encodeURIComponent(`
-        self.onmessage = function(e) {
-          self.postMessage({ id: e.data.id, result: null });
-        };
-      `)}`;
-    }
-    if (label === "html" || label === "handlebars" || label === "razor") {
-      return `data:text/javascript;charset=utf-8,${encodeURIComponent(`
-        self.onmessage = function(e) {
-          self.postMessage({ id: e.data.id, result: null });
-        };
-      `)}`;
-    }
-    if (label === "typescript" || label === "javascript") {
-      return `data:text/javascript;charset=utf-8,${encodeURIComponent(`
-        self.onmessage = function(e) {
-          self.postMessage({ id: e.data.id, result: null });
-        };
-      `)}`;
-    }
-    return `data:text/javascript;charset=utf-8,${encodeURIComponent(`
-      self.onmessage = function(e) {
-        self.postMessage({ id: e.data.id, result: null });
-      };
-    `)}`;
-  },
-};
 
 export default {
   name: "MonacoEditor",
@@ -113,34 +74,58 @@ export default {
     };
     const initEditor = async () => {
       if (!editorContainer.value) return;
-      const editorOptions = {
-        ...defaultOptions,
-        ...props.options,
-        value: props.value,
-        language: props.language,
-      };
-      editor = monaco.editor.create(editorContainer.value, editorOptions);
-      editor.onDidChangeModelContent(() => {
-        if (!isUpdating) {
-          const value = editor.getValue();
-          emit("change", value);
-        }
+
+      // 等待 Monaco Editor CDN 加载完成
+      if (!window.require) {
+        console.error("Monaco Editor loader not found");
+        return;
+      }
+
+      return new Promise((resolve) => {
+        window.require.config({
+          paths: {
+            vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs",
+          },
+        });
+
+        window.require(["vs/editor/editor.main"], () => {
+          const editorOptions = {
+            ...defaultOptions,
+            ...props.options,
+            value: props.value,
+            language: props.language,
+          };
+
+          editor = window.monaco.editor.create(editorContainer.value, editorOptions);
+
+          editor.onDidChangeModelContent(() => {
+            if (!isUpdating) {
+              const value = editor.getValue();
+              emit("change", value);
+            }
+          });
+
+          editor.onDidChangeCursorSelection(() => {
+            const selection = editor.getSelection();
+            if (selection) {
+              const selectedText = editor.getModel().getValueInRange(selection);
+              emit("selection-change", selectedText);
+            }
+          });
+
+          setupLanguageFeatures();
+
+          const resizeObserver = new ResizeObserver(() => {
+            if (editor) {
+              editor.layout();
+            }
+          });
+          resizeObserver.observe(editorContainer.value);
+          editor._resizeObserver = resizeObserver;
+
+          resolve();
+        });
       });
-      editor.onDidChangeCursorSelection(() => {
-        const selection = editor.getSelection();
-        if (selection) {
-          const selectedText = editor.getModel().getValueInRange(selection);
-          emit("selection-change", selectedText);
-        }
-      });
-      setupLanguageFeatures();
-      const resizeObserver = new ResizeObserver(() => {
-        if (editor) {
-          editor.layout();
-        }
-      });
-      resizeObserver.observe(editorContainer.value);
-      editor._resizeObserver = resizeObserver;
     };
     const setupLanguageFeatures = () => {
       if (!editor) return;
@@ -151,9 +136,11 @@ export default {
         insertSpaces: true,
       });
       if (props.language === "mermaid") {
-        if (!monaco.languages.getLanguages().find((lang) => lang.id === "mermaid")) {
-          monaco.languages.register({ id: "mermaid" });
-          monaco.languages.setMonarchTokensProvider("mermaid", {
+        if (
+          !window.monaco.languages.getLanguages().find((lang) => lang.id === "mermaid")
+        ) {
+          window.monaco.languages.register({ id: "mermaid" });
+          window.monaco.languages.setMonarchTokensProvider("mermaid", {
             tokenizer: {
               root: [
                 [
@@ -179,7 +166,7 @@ export default {
               ],
             },
           });
-          monaco.languages.setLanguageConfiguration("mermaid", {
+          window.monaco.languages.setLanguageConfiguration("mermaid", {
             brackets: [
               ["[", "]"],
               ["(", ")"],

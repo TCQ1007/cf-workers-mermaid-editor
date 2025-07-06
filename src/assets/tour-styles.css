@@ -1,0 +1,372 @@
+/* Driver.js 引导功能自定义样式 */
+
+/* 弹窗容器 */
+.driver-popover {
+  max-width: 420px !important;
+  border-radius: 12px !important;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.15) !important;
+  border: 1px solid rgba(0,0,0,0.1) !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+}
+
+/* 弹窗标题 */
+.driver-popover-title {
+  font-size: 1.25rem !important;
+  font-weight: 600 !important;
+  color: #1a202c !important;
+  margin-bottom: 0.75rem !important;
+  line-height: 1.4 !important;
+  border-bottom: 2px solid #e2e8f0 !important;
+  padding-bottom: 0.5rem !important;
+}
+
+/* 弹窗描述内容 */
+.driver-popover-description {
+  line-height: 1.6 !important;
+  color: #4a5568 !important;
+  font-size: 0.95rem !important;
+}
+
+/* 弹窗底部按钮区域 */
+.driver-popover-footer {
+  margin-top: 1.5rem !important;
+  padding-top: 1rem !important;
+  border-top: 1px solid #e2e8f0 !important;
+}
+
+/* 按钮样式 */
+.driver-popover-next-btn,
+.driver-popover-prev-btn,
+.driver-popover-close-btn {
+  border-radius: 6px !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+  font-size: 0.9rem !important;
+}
+
+.driver-popover-next-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border: none !important;
+  color: white !important;
+  padding: 0.5rem 1rem !important;
+}
+
+.driver-popover-next-btn:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+}
+
+.driver-popover-prev-btn {
+  background: #f7fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #4a5568 !important;
+  padding: 0.5rem 1rem !important;
+}
+
+.driver-popover-prev-btn:hover {
+  background: #edf2f7 !important;
+  border-color: #cbd5e0 !important;
+}
+
+.driver-popover-close-btn {
+  background: transparent !important;
+  border: none !important;
+  color: #a0aec0 !important;
+  font-size: 1.2rem !important;
+  padding: 0.25rem !important;
+  width: 32px !important;
+  height: 32px !important;
+}
+
+.driver-popover-close-btn:hover {
+  color: #718096 !important;
+  background: #f7fafc !important;
+}
+
+/* 引导内容样式 */
+.tour-welcome,
+.tour-step,
+.tour-complete {
+  font-family: inherit;
+}
+
+/* 欢迎页面样式 */
+.tour-welcome {
+  text-align: center;
+}
+
+.tour-welcome p {
+  margin: 0.75rem 0;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.tour-features {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #2d3748;
+  padding: 0.5rem;
+  background: white;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.tour-start {
+  font-weight: 600 !important;
+  color: #667eea !important;
+  margin-top: 1rem !important;
+}
+
+/* 步骤内容样式 */
+.tour-step p {
+  margin: 0.5rem 0;
+  font-size: 0.95rem;
+}
+
+.tour-list {
+  margin: 1rem 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.tour-list li {
+  margin: 0.75rem 0;
+  padding: 0.5rem 0.75rem;
+  background: #f8fafc;
+  border-radius: 6px;
+  border-left: 3px solid #667eea;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.tour-list li strong {
+  color: #2d3748;
+}
+
+/* 提示框样式 */
+.tour-tip {
+  background: linear-gradient(135deg, #e6fffa 0%, #f0fff4 100%);
+  border: 1px solid #9ae6b4;
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1rem 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.tour-tip strong {
+  color: #22543d;
+}
+
+/* 高亮框样式 */
+.tour-highlight {
+  background: linear-gradient(135deg, #fef5e7 0%, #fefcbf 100%);
+  border: 1px solid #f6e05e;
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1rem 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.tour-highlight strong {
+  color: #744210;
+}
+
+/* 注意事项样式 */
+.tour-note {
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1rem 0;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.tour-note strong {
+  color: #2d3748;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+/* 演示操作样式 */
+.tour-demo {
+  background: #edf2f7;
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.demo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.demo-action {
+  background: white;
+  border: 1px solid #cbd5e0;
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #4a5568;
+}
+
+/* 完成页面样式 */
+.tour-complete {
+  text-align: center;
+}
+
+.complete-header h3 {
+  margin: 0 0 1.5rem 0;
+  color: #22543d;
+  font-size: 1.2rem;
+}
+
+.tour-summary {
+  margin: 1.5rem 0;
+}
+
+.tour-summary h4 {
+  margin: 0 0 1rem 0;
+  color: #2d3748;
+  font-size: 1rem;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.summary-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: #f8fafc;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.summary-icon {
+  font-size: 1.1rem;
+}
+
+.summary-text {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #4a5568;
+}
+
+.tour-tips {
+  background: #fef5e7;
+  border: 1px solid #f6e05e;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+  text-align: left;
+}
+
+.tour-tips h4 {
+  margin: 0 0 1rem 0;
+  color: #744210;
+  font-size: 1rem;
+}
+
+.tour-tips ul {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.tour-tips li {
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.tour-tips kbd {
+  background: #2d3748;
+  color: white;
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  font-family: monospace;
+}
+
+.tour-footer {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.footer-text {
+  font-weight: 600;
+  color: #22543d;
+  font-size: 1.1rem;
+  margin: 0 0 0.5rem 0;
+}
+
+.footer-sub {
+  color: #718096;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .driver-popover {
+    max-width: 95vw !important;
+    margin: 1rem !important;
+  }
+  
+  .tour-features,
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .demo-actions {
+    justify-content: center;
+  }
+}
+
+/* 深色模式适配 */
+@media (prefers-color-scheme: dark) {
+  .driver-popover {
+    background: #2d3748 !important;
+    border-color: #4a5568 !important;
+  }
+  
+  .driver-popover-title {
+    color: #f7fafc !important;
+    border-color: #4a5568 !important;
+  }
+  
+  .driver-popover-description {
+    color: #e2e8f0 !important;
+  }
+  
+  .tour-list li,
+  .feature-item,
+  .summary-item {
+    background: #4a5568 !important;
+    color: #e2e8f0 !important;
+  }
+}

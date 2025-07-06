@@ -7,6 +7,7 @@
       </div>
       <div class="toolbar">
         <button @click="openPreviewWindow" class="btn btn-primary preview-window-btn">🪟 新窗口预览</button>
+        <TourButton ref="tourButtonRef" />
         <button @click="showAbout = true" class="about-btn" title="关于项目">?</button>
         <GitHubCorner :href="about.github" />
       </div>
@@ -125,7 +126,9 @@ import MonacoEditor from "../components/MonacoEditor.vue";
 import MermaidRenderer from "../components/MermaidRenderer.vue";
 import AboutModal from "../components/AboutModal.vue";
 import GitHubCorner from "../components/GitHubCorner.vue";
+import TourButton from "../components/TourButton.vue";
 import aboutConfig from "../assets/about.json";
+import { TourManager } from "../utils/tour.js";
 
 
 const editorRef = ref(null);
@@ -143,6 +146,7 @@ const isResizing = ref(false);
 const previewWindow = ref(null);
 const previewWindowCheckInterval = ref(null);
 const about = ref(aboutConfig);
+const tourButtonRef = ref(null);
 const lineCount = computed(() => code.value.split("\n").length);
 const handleCodeChange = (newCode) => {
   code.value = newCode;
@@ -383,9 +387,44 @@ const startPreviewWindowCheck = () => {
 window.getEditorCode = () => {
   return code.value;
 };
+
+// 初始化引导功能
+const initTourFeature = () => {
+  // 等待DOM完全渲染后再初始化引导
+  setTimeout(() => {
+    const tourManager = new TourManager();
+
+    // 检查是否需要自动启动引导
+    tourManager.checkAutoStart();
+
+    // 将引导管理器存储到全局，方便调试
+    if (import.meta.env.DEV) {
+      window.tourManager = tourManager;
+      console.log('引导功能已初始化，可通过 window.tourManager 访问');
+    }
+  }, 1000); // 延迟1秒确保所有组件都已渲染
+};
+
+// 手动启动引导（可选，供其他地方调用）
+const startTour = () => {
+  if (tourButtonRef.value) {
+    tourButtonRef.value.startTour();
+  }
+};
+
+// 重置引导状态（可选，供调试使用）
+const resetTour = () => {
+  if (tourButtonRef.value) {
+    tourButtonRef.value.resetTour();
+  }
+};
 onMounted(() => {
   loadFromLocalStorage();
   startAutoSave();
+
+  // 初始化引导功能
+  initTourFeature();
+
   // 监听来自预览窗口的消息
   window.addEventListener("message", handlePreviewWindowMessage);
 });
@@ -424,12 +463,7 @@ const handlePreviewWindowMessage = (event) => {
 };
 const showAbout = ref(false);
 
-onMounted(() => {
-  if (!localStorage.getItem("aboutModalShown")) {
-    showAbout.value = true;
-    localStorage.setItem("aboutModalShown", "1");
-  }
-});
+
 </script>
 
 <style>

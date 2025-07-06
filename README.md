@@ -277,21 +277,32 @@ mermaid-editor/
 ### 生产依赖
 ```json
 {
-  "vue": "^3.4.0",           // Vue.js 框架
-  "vue-router": "^4.2.0",    // Vue 路由管理
-  "monaco-editor": "^0.45.0" // 代码编辑器
+  "vue": "^3.4.0",
+  "vue-router": "^4.2.0",
+  "monaco-editor": "^0.45.0"
 }
 ```
+
+**依赖说明：**
+- `vue`: Vue.js 框架
+- `vue-router`: Vue 路由管理
+- `monaco-editor`: 代码编辑器
 
 ### 开发依赖
 ```json
 {
-  "@vitejs/plugin-vue": "^5.0.0",        // Vue 插件
-  "@cloudflare/vite-plugin": "^1.0.0",   // Cloudflare 集成
-  "vite": "^6.0.0",                      // 构建工具
-  "wrangler": "^3.0.0"                   // Workers CLI
+  "@vitejs/plugin-vue": "^5.0.0",
+  "@cloudflare/vite-plugin": "^1.0.0",
+  "vite": "^6.0.0",
+  "wrangler": "^3.0.0"
 }
 ```
+
+**依赖说明：**
+- `@vitejs/plugin-vue`: Vue 插件
+- `@cloudflare/vite-plugin`: Cloudflare 集成
+- `vite`: 构建工具
+- `wrangler`: Workers CLI
 
 ### 外部依赖（CDN）
 - **Mermaid.js**: 通过 CDN 加载，避免打包体积过大

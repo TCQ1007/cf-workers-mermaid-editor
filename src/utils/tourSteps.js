@@ -1,3 +1,34 @@
+// 引导功能配置
+export const tourConfig = {
+  version: "1.0.0",
+  autoStart: true,
+  autoStartDelay: 1500,
+  showProgress: true,
+  allowClose: true,
+  keyboardControl: true,
+  smoothScroll: true,
+
+  // Driver.js配置
+  driverOptions: {
+    animate: true,
+    opacity: 0.75,
+    padding: 10,
+    overlayClickNext: false,
+    showButtons: true,
+    showProgress: true,
+    keyboardControl: true,
+    smoothScroll: true
+  },
+
+  // 按钮文本
+  texts: {
+    doneBtnText: "🎉 完成引导",
+    closeBtnText: "✕",
+    nextBtnText: "下一步 →",
+    prevBtnText: "← 上一步"
+  }
+};
+
 // 引导步骤配置（新版Driver.js格式）
 export const tourSteps = [
   {

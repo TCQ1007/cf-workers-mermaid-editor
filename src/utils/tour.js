@@ -1,4 +1,4 @@
-import { tourSteps } from './tourSteps.js'
+import { tourSteps, tourConfig } from './tourSteps.js'
 
 /**
  * 引导功能管理器
@@ -7,8 +7,9 @@ import { tourSteps } from './tourSteps.js'
 export class TourManager {
   constructor() {
     this.driver = null
+    this.config = tourConfig
     this.isFirstVisit = !localStorage.getItem('tour-completed')
-    this.tourVersion = '1.0.0' // 引导版本，用于版本更新时重新显示引导
+    this.tourVersion = this.config.version
   }
 
   /**
@@ -27,8 +28,8 @@ export class TourManager {
       const driverConstructor = window.driver.js.driver
 
       this.driver = driverConstructor({
-        // 显示进度
-        showProgress: true,
+        // 使用配置文件中的选项
+        ...this.config.driverOptions,
 
         // 步骤配置
         steps: [], // 步骤将在startTour中设置
@@ -37,9 +38,7 @@ export class TourManager {
         popoverClass: 'driverjs-theme',
 
         // 按钮文本配置
-        nextBtnText: '下一步 →',
-        prevBtnText: '← 上一步',
-        doneBtnText: '🎉 完成引导',
+        ...this.config.texts,
 
         // 回调函数
         onDestroyed: () => {
@@ -96,13 +95,15 @@ export class TourManager {
    * 检查是否需要自动启动引导
    */
   checkAutoStart() {
+    if (!this.config.autoStart) return
+
     // 延迟检查，确保页面完全加载
     setTimeout(() => {
       if (this.shouldAutoStart()) {
         console.log('检测到首次访问，自动启动引导')
         this.startTour()
       }
-    }, 1500) // 延迟1.5秒，让用户先看到页面
+    }, this.config.autoStartDelay) // 使用配置中的延迟时间
   }
 
   /**

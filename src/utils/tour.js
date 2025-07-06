@@ -243,6 +243,16 @@ const tourSteps = [
 ];
 
 /**
+ * 本地存储键名常量
+ */
+const STORAGE_KEYS = {
+  TOUR_COMPLETED: 'tour-completed',
+  TOUR_VERSION: 'tour-version',
+  TOUR_START_TIME: 'tour-start-time',
+  TOUR_COMPLETE_TIME: 'tour-complete-time'
+}
+
+/**
  * 引导功能管理器
  * 负责管理整个引导流程的初始化、启动、状态管理等
  */
@@ -250,18 +260,27 @@ export class TourManager {
   constructor() {
     this.driver = null
     this.config = tourConfig
-    this.isFirstVisit = !localStorage.getItem('tour-completed')
+    this.isFirstVisit = !localStorage.getItem(STORAGE_KEYS.TOUR_COMPLETED)
     this.tourVersion = this.config.version
+    this.isInitialized = false
   }
 
   /**
    * 初始化Driver.js实例
-   * @returns {boolean} 初始化是否成功
+   * @returns {Promise<boolean>} 初始化是否成功
    */
-  initDriver() {
+  async initDriver() {
+    if (this.isInitialized && this.driver) {
+      return true
+    }
+
     // 检查Driver.js是否已加载（新版本API）
     if (typeof window.driver?.js?.driver !== 'function') {
-      console.error('Driver.js未加载或版本不正确，请确保CDN链接正确')
+      this.logError('Driver.js未加载或版本不正确', {
+        driverExists: typeof window.driver,
+        jsExists: typeof window.driver?.js,
+        driverFunction: typeof window.driver?.js?.driver
+      })
       return false
     }
 
@@ -296,30 +315,59 @@ export class TourManager {
         }
       })
 
+      this.isInitialized = true
+      this.logInfo('Driver.js初始化成功')
       return true
     } catch (error) {
-      console.error('Driver.js初始化失败:', error)
+      this.logError('Driver.js初始化失败', error)
       return false
     }
   }
 
   /**
+   * 统一的日志记录方法
+   */
+  logInfo(message, data = null) {
+    console.log(`[TourManager] ${message}`, data || '')
+  }
+
+  logError(message, error = null) {
+    console.error(`[TourManager] ${message}`, error || '')
+  }
+
+  logWarn(message, data = null) {
+    console.warn(`[TourManager] ${message}`, data || '')
+  }
+
+  /**
    * 开始引导流程
    * @param {boolean} force 是否强制开始（忽略已完成状态）
+   * @returns {Promise<boolean>} 是否成功启动
    */
-  startTour(force = false) {
-    // 如果不是强制开始且已经完成过引导，则不启动
-    if (!force && this.hasCompletedTour()) {
-      console.log('用户已完成引导，跳过自动引导')
-      return
-    }
-
-    if (!this.initDriver()) {
-      console.error('无法启动引导：Driver.js初始化失败')
-      return
-    }
+  async startTour(force = false) {
+    const startTime = performance.now();
 
     try {
+      // 如果不是强制开始且已经完成过引导，则不启动
+      if (!force && this.hasCompletedTour()) {
+        this.logInfo('用户已完成引导，跳过自动引导')
+        return false
+      }
+
+      // 初始化Driver.js
+      const initialized = await this.initDriver()
+      if (!initialized) {
+        this.logError('无法启动引导：Driver.js初始化失败')
+        return false
+      }
+
+      // 验证必要的DOM元素是否存在
+      const missingElements = this.validateTourElements()
+      if (missingElements.length > 0) {
+        this.logWarn('部分引导目标元素不存在', missingElements)
+        // 可以选择继续或者延迟启动
+      }
+
       // 使用新版本API设置步骤并启动
       this.driver.setSteps(tourSteps)
       this.driver.drive()
@@ -327,10 +375,31 @@ export class TourManager {
       // 记录引导开始
       this.onTourStart()
 
-      console.log('引导已启动')
+      const duration = performance.now() - startTime
+      this.logInfo(`引导启动成功，耗时: ${duration.toFixed(2)}ms`)
+      return true
+
     } catch (error) {
-      console.error('启动引导失败:', error)
+      this.logError('启动引导失败', error)
+      return false
     }
+  }
+
+  /**
+   * 验证引导目标元素是否存在
+   * @returns {string[]} 缺失的元素选择器列表
+   */
+  validateTourElements() {
+    const requiredSelectors = [
+      '.editor-container',
+      '.preview-content',
+      '.copy-dropdown',
+      '.download-dropdown',
+      '.preview-window-btn',
+      '.about-btn'
+    ]
+
+    return requiredSelectors.filter(selector => !document.querySelector(selector))
   }
 
   /**
@@ -368,18 +437,50 @@ export class TourManager {
   }
 
   /**
+   * 安全的localStorage操作
+   */
+  getStorageItem(key, defaultValue = null) {
+    try {
+      return localStorage.getItem(key) || defaultValue
+    } catch (error) {
+      this.logWarn('localStorage读取失败', { key, error })
+      return defaultValue
+    }
+  }
+
+  setStorageItem(key, value) {
+    try {
+      localStorage.setItem(key, value)
+      return true
+    } catch (error) {
+      this.logWarn('localStorage写入失败', { key, value, error })
+      return false
+    }
+  }
+
+  removeStorageItem(key) {
+    try {
+      localStorage.removeItem(key)
+      return true
+    } catch (error) {
+      this.logWarn('localStorage删除失败', { key, error })
+      return false
+    }
+  }
+
+  /**
    * 检查用户是否已完成引导
    * @returns {boolean}
    */
   hasCompletedTour() {
-    const completed = localStorage.getItem('tour-completed')
-    const version = localStorage.getItem('tour-version')
-    
+    const completed = this.getStorageItem(STORAGE_KEYS.TOUR_COMPLETED)
+    const version = this.getStorageItem(STORAGE_KEYS.TOUR_VERSION)
+
     // 如果版本不匹配，认为未完成
     if (version !== this.tourVersion) {
       return false
     }
-    
+
     return completed === 'true'
   }
 
@@ -387,11 +488,11 @@ export class TourManager {
    * 重置引导状态
    */
   resetTour() {
-    localStorage.removeItem('tour-completed')
-    localStorage.removeItem('tour-version')
-    localStorage.removeItem('tour-start-time')
+    const keys = Object.values(STORAGE_KEYS)
+    keys.forEach(key => this.removeStorageItem(key))
+
     this.isFirstVisit = true
-    console.log('引导状态已重置')
+    this.logInfo('引导状态已重置')
   }
 
   /**

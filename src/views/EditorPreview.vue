@@ -128,7 +128,7 @@ import AboutModal from "../components/AboutModal.vue";
 import GitHubCorner from "../components/GitHubCorner.vue";
 import TourButton from "../components/TourButton.vue";
 import aboutConfig from "../assets/about.json";
-import { TourManager } from "../utils/tour.js";
+import { globalTourManager } from "../utils/tour.js";
 
 
 const editorRef = ref(null);
@@ -389,20 +389,22 @@ window.getEditorCode = () => {
 };
 
 // 初始化引导功能
-const initTourFeature = () => {
+const initTourFeature = async () => {
   // 等待DOM完全渲染后再初始化引导
-  setTimeout(() => {
-    const tourManager = new TourManager();
+  await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // 检查是否需要自动启动引导
-    tourManager.checkAutoStart();
+  try {
+    // 使用全局引导管理器
+    await globalTourManager.checkAutoStart();
 
     // 将引导管理器存储到全局，方便调试
     if (import.meta.env.DEV) {
-      window.tourManager = tourManager;
+      window.tourManager = globalTourManager;
       console.log('引导功能已初始化，可通过 window.tourManager 访问');
     }
-  }, 1000); // 延迟1秒确保所有组件都已渲染
+  } catch (error) {
+    console.error('引导功能初始化失败:', error);
+  }
 };
 
 // 手动启动引导（可选，供其他地方调用）

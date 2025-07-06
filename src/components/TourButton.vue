@@ -24,7 +24,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import { TourManager } from '../utils/tour.js'
+import { globalTourManager } from '../utils/tour.js'
 
 // Props
 const props = defineProps({
@@ -44,8 +44,8 @@ const props = defineProps({
 const showPulse = ref(false)
 const showResetButton = ref(false)
 
-// 创建引导管理器实例
-const tourManager = new TourManager()
+// 使用全局引导管理器实例（避免重复创建）
+const tourManager = globalTourManager
 
 /**
  * 开始引导
@@ -53,7 +53,7 @@ const tourManager = new TourManager()
 const startTour = () => {
   // 停止脉冲动画
   showPulse.value = false
-  
+
   // 强制启动引导
   tourManager.startTour(true)
 }
@@ -61,16 +61,67 @@ const startTour = () => {
 /**
  * 重置引导状态
  */
-const resetTour = () => {
-  if (confirm('确定要重置引导状态吗？这将清除所有引导记录。')) {
+const resetTour = async () => {
+  // 使用现代化的确认对话框
+  const confirmed = await showConfirmDialog(
+    '重置引导状态',
+    '确定要重置引导状态吗？这将清除所有引导记录。',
+    '重置',
+    '取消'
+  )
+
+  if (confirmed) {
     tourManager.resetTour()
     showPulse.value = true
-    
+
     // 给用户反馈
-    setTimeout(() => {
-      alert('引导状态已重置！刷新页面将重新显示引导。')
-    }, 100)
+    showSuccessMessage('引导状态已重置！刷新页面将重新显示引导。')
   }
+}
+
+/**
+ * 现代化确认对话框
+ */
+const showConfirmDialog = (title, message, confirmText, cancelText) => {
+  return new Promise((resolve) => {
+    // 如果浏览器支持，可以使用更现代的方式
+    // 这里暂时使用原生confirm，后续可以替换为自定义组件
+    const result = confirm(`${title}\n\n${message}`)
+    resolve(result)
+  })
+}
+
+/**
+ * 成功消息提示
+ */
+const showSuccessMessage = (message) => {
+  // 创建临时提示元素
+  const toast = document.createElement('div')
+  toast.textContent = message
+  toast.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #10b981;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 10000;
+    font-family: var(--tour-font-family, sans-serif);
+    font-size: 14px;
+    max-width: 300px;
+    word-wrap: break-word;
+  `
+
+  document.body.appendChild(toast)
+
+  // 3秒后自动移除
+  setTimeout(() => {
+    if (toast.parentNode) {
+      toast.parentNode.removeChild(toast)
+    }
+  }, 3000)
 }
 
 /**

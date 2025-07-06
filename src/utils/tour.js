@@ -395,7 +395,7 @@ export class TourManager {
       '.preview-content',
       '.copy-dropdown',
       '.download-dropdown',
-      '.preview-window-btn',
+      '.preview-window-btn', // 现在在预览区域标题右侧
       '.about-btn'
     ]
 

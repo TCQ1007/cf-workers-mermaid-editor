@@ -6,7 +6,6 @@
         <span class="subtitle">专业的 Mermaid 语法编辑器</span>
       </div>
       <div class="toolbar">
-        <button @click="openPreviewWindow" class="btn btn-primary preview-window-btn">🪟 新窗口预览</button>
         <TourButton ref="tourButtonRef" />
         <button @click="showAbout = true" class="about-btn" title="关于项目">?</button>
         <GitHubCorner :href="about.github" />
@@ -56,7 +55,12 @@
         :style="{ width: `${100 - editorWidth}%` }"
       >
         <div class="section-header">
-          <h3>图表预览</h3>
+          <div class="preview-title-area">
+            <h3>图表预览</h3>
+            <button @click="openPreviewWindow" class="btn btn-small preview-window-btn" title="在新窗口中打开预览">
+              🪟 新窗口
+            </button>
+          </div>
           <div class="preview-controls">
             <!-- 复制下拉菜单 -->
             <div class="copy-dropdown" @mouseleave="showCopyMenu = false">
@@ -348,10 +352,9 @@ const openPreviewWindow = () => {
     previewWindow.value.close();
   }
 
-  // 构建预览URL，考虑微前端环境的路径前缀
+  // 构建预览URL
   const baseUrl = window.location.origin;
-  const basePath = getBasePath();
-  const previewUrl = baseUrl + basePath + (basePath === '/' ? 'preview' : '/preview');
+  const previewUrl = `${baseUrl}/preview`;
 
   // 创建新窗口，使用预览路由
   const windowFeatures =
@@ -359,7 +362,8 @@ const openPreviewWindow = () => {
   previewWindow.value = window.open(previewUrl, "MermaidPreview", windowFeatures);
 
   if (!previewWindow.value) {
-    alert("无法打开新窗口，请检查浏览器弹窗设置");
+    // 使用现代化的提示方式
+    showNotification("无法打开新窗口，请检查浏览器弹窗设置", "warning");
     return;
   }
 
@@ -386,6 +390,62 @@ const startPreviewWindowCheck = () => {
 // 提供给预览窗口获取当前代码的方法
 window.getEditorCode = () => {
   return code.value;
+};
+
+// 现代化通知函数
+const showNotification = (message, type = 'info') => {
+  const colors = {
+    info: '#3b82f6',
+    success: '#10b981',
+    warning: '#f59e0b',
+    error: '#ef4444'
+  };
+
+  const notification = document.createElement('div');
+  notification.textContent = message;
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: ${colors[type]};
+    color: white;
+    padding: 12px 20px;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 10000;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    max-width: 300px;
+    word-wrap: break-word;
+    animation: slideIn 0.3s ease-out;
+  `;
+
+  // 添加动画样式
+  if (!document.querySelector('#notification-styles')) {
+    const style = document.createElement('style');
+    style.id = 'notification-styles';
+    style.textContent = `
+      @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  document.body.appendChild(notification);
+
+  // 3秒后自动移除
+  setTimeout(() => {
+    if (notification.parentNode) {
+      notification.style.animation = 'slideIn 0.3s ease-out reverse';
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 300);
+    }
+  }, 3000);
 };
 
 // 初始化引导功能
@@ -896,6 +956,57 @@ body {
   font-size: 1rem;
   color: #495057;
   font-weight: 600;
+}
+
+.preview-title-area {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.preview-title-area h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #495057;
+  font-weight: 600;
+}
+
+.preview-window-btn {
+  font-size: 0.75rem;
+  padding: 0.4rem 0.8rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.preview-window-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .preview-title-area {
+    gap: 0.5rem;
+  }
+
+  .preview-window-btn {
+    font-size: 0.7rem;
+    padding: 0.3rem 0.6rem;
+    height: 26px;
+  }
+
+  .preview-title-area h3 {
+    font-size: 0.9rem;
+  }
 }
 
 .editor-controls {

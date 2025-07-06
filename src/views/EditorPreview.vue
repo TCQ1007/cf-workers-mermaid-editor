@@ -474,12 +474,7 @@ const startTour = () => {
   }
 };
 
-// 重置引导状态（可选，供调试使用）
-const resetTour = () => {
-  if (tourButtonRef.value) {
-    tourButtonRef.value.resetTour();
-  }
-};
+
 onMounted(() => {
   loadFromLocalStorage();
   startAutoSave();

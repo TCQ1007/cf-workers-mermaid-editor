@@ -70,7 +70,6 @@ onMounted(() => {
 // 暴露方法给父组件
 defineExpose({
   startTour,
-  resetTour,
   tourManager,
   stopPulse: () => { showPulse.value = false },
   startPulse: () => { showPulse.value = true }

@@ -1,5 +1,6 @@
 {
   "author": "TCQ1007",
+  "github": "https://github.com/TCQ1007/cf-workers-mermaid-editor",
   "pain_points": [
     "Lark 文档的文本绘图无法使用TAB键",
     "Lark 文档无法分屏预览",

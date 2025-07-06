@@ -7,6 +7,13 @@
       </div>
       <div class="about-content">
         <div class="about-row"><strong>作者：</strong>{{ about.author }}</div>
+        <div class="about-row">
+          <strong>GitHub：</strong>
+          <a :href="about.github" target="_blank" class="github-link">
+            {{ about.github }}
+            <span class="external-icon">🔗</span>
+          </a>
+        </div>
 
         <div class="about-section">
           <div class="about-row"><strong>💡 解决的痛点：</strong></div>
@@ -105,6 +112,24 @@ const close = () => emit("close");
 
 .pain-points li {
   color: #e74c3c;
+}
+
+.github-link {
+  color: #0366d6;
+  text-decoration: none;
+  word-break: break-all;
+  transition: color 0.2s ease;
+}
+
+.github-link:hover {
+  color: #0256cc;
+  text-decoration: underline;
+}
+
+.external-icon {
+  margin-left: 0.25rem;
+  font-size: 0.8rem;
+  opacity: 0.7;
 }
 
 /* 响应式设计 */

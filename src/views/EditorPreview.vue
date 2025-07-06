@@ -7,9 +7,8 @@
       </div>
       <div class="toolbar">
         <button @click="openPreviewWindow" class="btn btn-primary preview-window-btn">🪟 新窗口预览</button>
-        <span v-if="isInJingdongMicroApp()" class="microapp-indicator">🔧 微前端模式</span>
         <button @click="showAbout = true" class="about-btn" title="关于项目">?</button>
-        <GitHubCorner href="https://github.com/TCQ1007/cf-workers-mermaid-editor" />
+        <GitHubCorner :href="about.github" />
       </div>
     </div>
     <div class="content" :class="{ 'split-view': showPreview }">
@@ -126,7 +125,8 @@ import MonacoEditor from "../components/MonacoEditor.vue";
 import MermaidRenderer from "../components/MermaidRenderer.vue";
 import AboutModal from "../components/AboutModal.vue";
 import GitHubCorner from "../components/GitHubCorner.vue";
-import { isInJingdongMicroApp, getBasePath } from "../config/microapp.js";
+import aboutConfig from "../assets/about.json";
+
 
 const editorRef = ref(null);
 const code = ref("");
@@ -142,6 +142,7 @@ const editorWidth = ref(40); // 默认40%宽度
 const isResizing = ref(false);
 const previewWindow = ref(null);
 const previewWindowCheckInterval = ref(null);
+const about = ref(aboutConfig);
 const lineCount = computed(() => code.value.split("\n").length);
 const handleCodeChange = (newCode) => {
   code.value = newCode;
@@ -585,14 +586,7 @@ body {
   margin-right: 56px;
 }
 
-.microapp-indicator {
-  font-size: 0.8rem;
-  color: #28a745;
-  background: rgba(40, 167, 69, 0.1);
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  border: 1px solid rgba(40, 167, 69, 0.2);
-}
+
 
 /* 复制下拉菜单 */
 .copy-dropdown {

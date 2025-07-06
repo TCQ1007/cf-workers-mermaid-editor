@@ -2,9 +2,6 @@ import { createRouter, createWebHistory } from 'vue-router'
 import EditorPreview from '../views/EditorPreview.vue'
 import PreviewWindow from '../views/PreviewWindow.vue'
 import NotFound from '../views/NotFound.vue'
-import { getBasePath, microAppLifecycle } from '../config/microapp.js'
-
-const basePath = getBasePath()
 
 const routes = [
   {
@@ -25,13 +22,8 @@ const routes = [
 ]
 
 const router = createRouter({
-  history: createWebHistory(basePath),
+  history: createWebHistory(),
   routes
-})
-
-// 路由就绪后触发微前端生命周期
-router.isReady().then(() => {
-  microAppLifecycle.mounted()
 })
 
 export default router

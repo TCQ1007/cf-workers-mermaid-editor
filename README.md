@@ -18,13 +18,19 @@
 - **🔄 实时预览**：左侧编辑，右侧实时渲染，所见即所得的编辑体验
 - **🖱️ 智能交互**：右侧预览支持滚轮缩放和中键拖拽，随时查看图表细节
 - **⌨️ 编辑器优化**：支持 Ctrl + 鼠标滚轮调整字体大小，Monaco编辑器提供专业代码体验
-- **🔍 双重预览**：右侧快速预览 + 全屏大图预览，满足不同查看需求
+- **🪟 新窗口预览**：独立预览窗口，支持多屏显示和演示模式
 
 ### 📤 多格式导出
 - **📋 复制功能**：支持 SVG代码、PNG图片、JPG图片三种格式复制
 - **💾 下载功能**：支持 SVG文件、PNG图片、JPG图片三种格式下载
 - **🎨 背景处理**：PNG/JPG自动添加白色背景，适合文档使用
 - **🔧 高质量输出**：2倍缩放确保图片清晰度，支持自定义质量
+
+### 🎯 用户引导系统
+- **🎯 功能引导**：基于Driver.js的交互式引导，7步完整功能介绍
+- **🔄 智能启动**：首次访问自动启动，已完成用户可手动重新学习
+- **📱 响应式适配**：引导界面完美适配桌面和移动端
+- **✨ 现代化设计**：精美的引导界面和流畅的动画效果
 
 ### 🚀 现代化架构
 - **📱 响应式设计**：完美适配桌面和移动端，随时随地编辑图表
@@ -74,9 +80,19 @@ npx wrangler deploy
 ### 界面布局
 - **📝 左侧编辑器**：Monaco 代码编辑器，支持 Mermaid 语法高亮和智能提示
 - **👁️ 右侧预览**：实时渲染的 Mermaid 图表，支持交互操作
-- **🛠️ 顶部工具栏**：新窗口预览、复制、下载等功能按钮
-- **ℹ️ 底部状态栏**：显示行数统计和项目信息
-- **❗ 关于按钮**：点击查看项目详细信息和功能介绍
+- **🛠️ 顶部工具栏**：功能引导、关于项目、GitHub链接
+- **🪟 预览控制**：图表预览标题右侧的新窗口预览按钮
+- **📤 导出功能**：预览区域的复制和下载功能按钮
+
+### 🎯 功能引导
+首次访问时会自动启动功能引导，包含以下步骤：
+1. **欢迎介绍** - 项目概述和功能亮点
+2. **代码编辑器** - Monaco编辑器功能和快捷键
+3. **实时预览** - 预览区域和交互操作
+4. **复制功能** - 多格式复制选项说明
+5. **下载功能** - 文件下载和格式选择
+6. **新窗口预览** - 独立预览窗口功能
+7. **关于项目** - 项目信息和GitHub链接
 
 ### 交互操作
 
@@ -93,7 +109,7 @@ npx wrangler deploy
 #### 导出功能
 - **📋 复制为**：支持 SVG代码、PNG图片、JPG图片
 - **💾 下载为**：支持 SVG文件、PNG图片、JPG图片
-- **🔍 全屏预览**：独立预览窗口，支持更大尺寸查看
+- **🪟 新窗口预览**：独立预览窗口，支持多屏显示和演示
 
 ## 🏗️ 技术架构
 
@@ -141,7 +157,34 @@ const handlePreviewMouseDown = (event) => {
 }
 ```
 
-#### 3. 多格式导出
+#### 3. 用户引导系统
+```javascript
+// 引导功能管理器
+export class TourManager {
+  async startTour(force = false) {
+    const initialized = await this.initDriver()
+    if (!initialized) return false
+
+    this.driver.setSteps(tourSteps)
+    this.driver.drive()
+    return true
+  }
+}
+
+// 引导步骤配置
+const tourSteps = [
+  {
+    element: '.editor-container',
+    popover: {
+      title: '📝 代码编辑器',
+      description: '这里是Monaco编辑器...',
+      side: 'right'
+    }
+  }
+]
+```
+
+#### 4. 多格式导出
 ```javascript
 // SVG转图片功能
 const svgToImage = (svgString, format = 'png', scale = 2, withBackground = true) => {
@@ -161,7 +204,7 @@ const svgToImage = (svgString, format = 'png', scale = 2, withBackground = true)
 }
 ```
 
-#### 4. Cloudflare Workers 服务
+#### 5. Cloudflare Workers 服务
 ```javascript
 // 极简的Workers服务，支持CORS和静态资源
 export default {
@@ -199,21 +242,28 @@ mermaid-editor/
 │   │   ├── MonacoEditor.vue      # Monaco 代码编辑器组件
 │   │   ├── MermaidRenderer.vue   # Mermaid 图表渲染组件
 │   │   ├── AboutModal.vue        # 关于项目弹窗组件
+│   │   ├── TourButton.vue        # 功能引导按钮组件
 │   │   └── GitHubCorner.vue      # GitHub 角标组件
 │   ├── views/              # 页面组件
 │   │   ├── EditorPreview.vue     # 主编辑页面
 │   │   ├── PreviewWindow.vue     # 独立预览窗口
 │   │   └── NotFound.vue          # 404 错误页面
 │   ├── assets/             # 静态资源
-│   │   └── about.json            # 项目信息配置
+│   │   ├── about.json            # 项目信息配置
+│   │   ├── main.css              # 主样式文件
+│   │   └── tour-styles.css       # 引导功能样式
 │   ├── utils/              # 工具函数
-│   │   └── storage.js            # 本地存储工具
+│   │   ├── storage.js            # 本地存储工具
+│   │   └── tour.js               # 引导功能管理器
 │   ├── router/             # 路由配置
 │   │   └── index.js              # Vue Router 配置
 │   ├── App.vue             # 根组件
 │   └── main.js             # 应用入口
 ├── server/                 # 服务端代码
 │   └── index.js            # Cloudflare Workers 服务
+├── docs/                   # 项目文档
+│   └── TOUR_GUIDE.md       # 引导功能使用指南
+├── tests/                  # 测试文件（可选）
 ├── public/                 # 公共资源
 │   └── favicon.ico         # 网站图标
 ├── dist/                   # 构建输出目录
@@ -246,6 +296,33 @@ mermaid-editor/
 ### 外部依赖（CDN）
 - **Mermaid.js**: 通过 CDN 加载，避免打包体积过大
 - **Monaco Editor**: 通过 AMD 模块加载，支持按需加载
+- **Driver.js**: 引导功能库，通过 CDN 加载，轻量级集成
+
+## 🎯 特色功能
+
+### 🎯 智能引导系统
+- **首次访问自动引导**：新用户首次访问时自动启动7步功能介绍
+- **手动重新学习**：随时点击引导按钮重新学习所有功能
+- **响应式适配**：引导界面完美适配桌面和移动端
+- **现代化设计**：基于Driver.js的精美引导界面
+
+### 🪟 多窗口支持
+- **独立预览窗口**：点击预览区标题右侧的"🪟 新窗口"按钮
+- **实时同步**：预览窗口与主编辑器实时同步内容
+- **多屏显示**：支持拖拽到其他显示器进行演示
+- **完整交互**：预览窗口支持所有缩放和拖拽操作
+
+### 📤 智能导出
+- **三种复制格式**：SVG代码、PNG图片、JPG图片
+- **三种下载格式**：SVG文件、PNG图片、JPG图片
+- **自动背景处理**：PNG/JPG自动添加白色背景
+- **高质量输出**：2倍缩放确保图片清晰度
+
+### 🎨 用户体验优化
+- **现代化通知**：替代原生alert的滑入式通知系统
+- **智能交互**：滚轮缩放、中键拖拽、双击重置
+- **响应式设计**：完美适配各种设备和屏幕尺寸
+- **无干扰设计**：移除自动弹窗，用户主动选择查看信息
 
 ## 🛠️ 开发指南
 
